@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>MoveDex — Competitive Pokémon Lookup</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --white:#FFFFFF;
+  --text-primary:#FFFFFF;
+  --text-secondary:#AFC3DD;
+  --text-muted:#7E95B6;
+  --royal:#2F6FED;
+  --royal-light:#3C86FF;
+  --glass-bg:rgba(15,30,55,.82);
+  --glass-border:rgba(255,255,255,.08);
+  --glass-shadow:0 15px 35px rgba(0,0,0,.35);
+  --nav-bg:rgba(10,24,47,.85);
+  --input-bg:#12284A;
+  --chip-bg:#102544;
+  --font-display:'Sora',sans-serif;
+  --font-body:'Inter',sans-serif;
+}
+*{box-sizing:border-box;margin:0;padding:0;}
+html,body{margin:0;padding:0;}
+body{
+  font-family:var(--font-body);
+  color:var(--text-primary);
+  min-height:100vh;
+  overflow-x:hidden;
+  background:linear-gradient(180deg,#071321 0%,#08192d 50%,#0b2140 100%);
+}
+
+.glow{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0;}
+.glow-tl{width:500px;height:500px;top:-150px;left:-200px;background:radial-gradient(circle,rgba(27,75,149,.4),transparent 70%);}
+.glow-tr{width:480px;height:480px;top:100px;right:-220px;background:radial-gradient(circle,rgba(47,111,237,.22),transparent 70%);}
+.glow-bl{width:520px;height:520px;bottom:-200px;left:-180px;background:radial-gradient(circle,rgba(91,143,249,.2),transparent 70%);}
+.glow-br{width:600px;height:600px;bottom:-250px;right:-250px;background:radial-gradient(circle,rgba(47,111,237,.3),transparent 70%);}
+.glow-c{width:400px;height:400px;top:40%;left:50%;transform:translate(-50%,-50%);background:radial-gradient(circle,rgba(100,200,255,.06),transparent 70%);}
+
+.navbar{
+  position:sticky;top:0;z-index:100;
+  min-height:70px;
+  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  padding:10px 40px;
+  background:var(--nav-bg);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border-bottom:1px solid rgba(255,255,255,.06);
+}
+.nav-brand{
+  font-family:var(--font-display);font-weight:800;font-size:24px;
+  color:var(--white);letter-spacing:-0.02em;justify-self:start;
+  white-space:nowrap;
+}
+.search-box{
+  display:flex;align-items:center;gap:8px;
+  width:clamp(200px,40vw,520px);height:44px;
+  background:var(--input-bg);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:14px;padding:0 6px 0 14px;
+  position:relative;
+}
+.search-box svg{flex-shrink:0;opacity:.5;}
+.search-box input{
+  flex:1;background:transparent;border:none;outline:none;
+  color:var(--white);font-family:var(--font-body);font-size:14px;
+}
+.search-box input::placeholder{color:var(--text-muted);}
+.search-box button{
+  background:linear-gradient(135deg,#2F6FED,#3C86FF);
+  color:white;border:none;border-radius:12px;
+  padding:0 18px;height:32px;
+  font-family:var(--font-body);font-weight:600;font-size:13px;
+  cursor:pointer;transition:all .2s ease;flex-shrink:0;
+}
+.search-box button:hover{transform:translateY(-1px);box-shadow:0 0 18px rgba(47,111,237,.45);}
+.quick-picks{display:flex;gap:8px;flex-wrap:wrap;justify-self:end;}
+.chip{
+  background:var(--chip-bg);color:var(--text-secondary);
+  border:1px solid rgba(255,255,255,.08);
+  padding:6px 14px;border-radius:20px;font-size:13px;
+  font-family:var(--font-body);cursor:pointer;transition:all .15s ease;
+}
+.chip:hover{background:var(--royal);color:white;border-color:var(--royal);}
+
+.search-wrap{position:relative;}
+.autocomplete{
+  position:absolute;top:calc(100% + 6px);left:0;right:0;
+  background:rgba(12,24,47,.96);
+  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
+  border:1px solid rgba(255,255,255,.1);
+  border-radius:14px;overflow:hidden;z-index:200;
+  max-height:380px;overflow-y:auto;
+  box-shadow:0 20px 50px rgba(0,0,0,.6);
+  display:none;
+}
+.autocomplete.open{display:block;}
+.autocomplete::-webkit-scrollbar{width:6px;}
+.autocomplete::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px;}
+.ac-item{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 16px;cursor:pointer;transition:background .1s;
+}
+.ac-item:hover,.ac-item.sel{background:rgba(47,111,237,.2);}
+.ac-item img{width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));}
+.ac-item .ac-name{font-size:14px;color:var(--white);font-weight:500;flex:1;}
+.ac-item .ac-id{font-size:12px;color:var(--text-muted);font-weight:600;}
+
+main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px clamp(16px,4vw,40px) 80px;}
+
+.empty-state{
+  display:flex;flex-direction:column;align-items:center;justify-content:center;
+  text-align:center;padding:80px 20px;gap:16px;
+}
+.empty-state h2{font-family:var(--font-display);font-size:clamp(18px,3vw,24px);font-weight:700;color:var(--white);margin:0;}
+.empty-state p{color:var(--text-muted);font-size:clamp(13px,1.5vw,15px);max-width:440px;margin:0;line-height:1.6;}
+
+.loading-state{
+  display:flex;align-items:center;justify-content:center;gap:14px;
+  padding:120px 20px;color:var(--text-muted);font-size:16px;
+}
+.spinner{
+  width:24px;height:24px;
+  border:3px solid rgba(255,255,255,.1);border-top-color:var(--royal);
+  border-radius:50%;animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg);}}
+
+.error-state{
+  display:flex;flex-direction:column;align-items:center;text-align:center;
+  gap:8px;padding:120px 20px;color:var(--text-muted);
+}
+.error-state strong{color:var(--white);font-size:20px;font-family:var(--font-display);}
+
+.layout{display:grid;grid-template-columns:minmax(280px,320px) 1fr;gap:18px;align-items:start;}
+
+.poke-card{
+  position:sticky;top:102px;
+  background:rgba(10,24,47,.78);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--glass-border);
+  border-radius:20px;padding:clamp(16px,2vw,22px);
+  box-shadow:0 20px 40px rgba(0,0,0,.35);
+}
+.poke-card img{
+  width:min(260px,100%);height:auto;max-height:260px;object-fit:contain;
+  filter:drop-shadow(0 14px 28px rgba(0,0,0,.45));
+  margin:0 auto;display:block;
+}
+.poke-card .dex-num{color:var(--text-muted);font-size:14px;text-align:center;margin-top:12px;}
+.poke-card .name{
+  font-family:var(--font-display);font-size:clamp(28px,4vw,40px);font-weight:700;
+  color:var(--white);text-align:center;margin:4px 0 8px;
+}
+.types{display:flex;gap:8px;justify-content:center;margin-bottom:16px;}
+.type-badge{
+  font-size:11px;padding:4px 14px;border-radius:20px;
+  color:#0a0d12;font-weight:700;text-transform:uppercase;letter-spacing:.3px;
+}
+.poke-stats{
+  display:grid;grid-template-columns:1fr 1fr;gap:12px;
+  padding:16px 0;
+  border-top:1px solid rgba(255,255,255,.08);
+  border-bottom:1px solid rgba(255,255,255,.08);
+  margin:8px 0;
+}
+.poke-stat{text-align:center;}
+.poke-stat .stat-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px;}
+.poke-stat .stat-value{font-size:16px;color:var(--white);font-weight:600;}
+.poke-dex-entry{font-size:13px;color:var(--text-secondary);line-height:1.6;margin-top:12px;}
+
+.content-col{display:flex;flex-direction:column;gap:clamp(12px,2vw,18px);}
+
+.card{
+  background:var(--glass-bg);
+  backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
+  border:1px solid var(--glass-border);
+  border-radius:18px;padding:clamp(18px,2.5vw,28px) clamp(16px,2.5vw,32px);
+  box-shadow:var(--glass-shadow);
+}
+.card-header{display:flex;align-items:center;gap:12px;margin-bottom:24px;}
+.card-header h2{font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--white);margin:0;}
+.tier-pill{
+  display:inline-block;font-size:12px;font-weight:700;
+  color:#7fb1ff;background:rgba(47,111,237,.15);
+  border:1px solid rgba(47,111,237,.35);
+  padding:4px 14px;border-radius:20px;
+}
+
+.build-columns{display:grid;grid-template-columns:1fr 1fr 1fr;gap:clamp(16px,2vw,24px);}
+.build-col-title{
+  font-size:12px;color:var(--text-muted);text-transform:uppercase;
+  letter-spacing:.5px;font-weight:600;margin-bottom:14px;
+  display:flex;align-items:center;gap:8px;
+}
+.build-col-title svg{color:var(--royal-light);flex-shrink:0;}
+
+.build-row{padding:12px 0;border-bottom:1px solid rgba(255,255,255,.06);}
+.build-row:last-child{border-bottom:none;}
+.build-row-header{display:flex;align-items:center;gap:8px;margin-bottom:6px;}
+.build-row-header svg{color:var(--royal-light);flex-shrink:0;}
+.build-label{font-size:11px;color:var(--text-muted);text-transform:uppercase;letter-spacing:.4px;font-weight:600;}
+.build-value{font-size:clamp(13px,1.3vw,15px);color:var(--white);font-weight:600;padding-left:24px;word-break:break-word;}
+
+.ev-bar{
+  display:flex;height:6px;border-radius:3px;overflow:hidden;
+  margin-top:8px;margin-left:24px;gap:2px;background:rgba(255,255,255,.06);
+}
+.ev-segment{height:100%;border-radius:3px;transition:width .3s;}
+
+.move-pill{
+  display:flex;align-items:center;gap:10px;
+  padding:10px 14px;
+  background:rgba(255,255,255,.04);
+  border:1px solid rgba(255,255,255,.08);
+  border-radius:10px;font-size:14px;color:var(--white);font-weight:500;
+}
+.move-pill svg{color:var(--text-muted);flex-shrink:0;}
+.move-pill .move-type-badge{
+  margin-left:auto;font-size:9px;padding:2px 8px;
+  border-radius:10px;font-weight:700;color:#0a0d12;flex-shrink:0;
+}
+
+.about-text{font-size:14px;color:var(--text-secondary);line-height:1.65;margin:0 0 20px;}
+.smogon-btn{
+  display:flex;align-items:center;justify-content:center;gap:8px;
+  width:100%;padding:12px 20px;
+  background:linear-gradient(135deg,#2F6FED,#3C86FF);
+  color:white;border:none;border-radius:12px;
+  font-family:var(--font-body);font-weight:600;font-size:14px;
+  text-decoration:none;cursor:pointer;transition:all .2s ease;
+}
+.smogon-btn:hover{transform:translateY(-2px);box-shadow:0 0 18px rgba(47,111,237,.45);}
+
+.learnset-sub{font-size:12px;color:var(--text-muted);margin:-16px 0 18px;}
+.learnset-columns{display:grid;grid-template-columns:repeat(3,1fr);gap:0 clamp(12px,2vw,24px);}
+.learn-row{
+  display:flex;align-items:center;gap:12px;
+  padding:10px 0;border-bottom:1px solid rgba(255,255,255,.06);font-size:13px;
+}
+.learn-row .lv{color:var(--royal-light);font-weight:700;min-width:32px;}
+.learn-row .mv{color:var(--white);flex:1;}
+.learn-type-badge{
+  font-size:9px;padding:2px 8px;border-radius:10px;
+  font-weight:700;color:#0a0d12;flex-shrink:0;
+}
+.learnset-grid-empty{font-size:14px;color:var(--text-muted);font-style:italic;}
+
+.fallback-tag{
+  display:inline-block;font-size:11px;color:var(--white);
+  background:rgba(126,149,182,.3);padding:4px 12px;
+  border-radius:6px;font-weight:600;margin-bottom:16px;
+}
+.fallback-note{font-size:14px;color:var(--text-secondary);line-height:1.65;}
+a.smogon-link{color:var(--royal);text-decoration:none;font-weight:600;}
+a.smogon-link:hover{text-decoration:underline;}
+
+@media(max-width:1100px){
+  .layout{grid-template-columns:1fr;}
+  .poke-card{position:static;max-width:400px;margin:0 auto;}
+  .poke-card img{width:min(240px,80%);}
+  .build-columns{grid-template-columns:1fr 1fr;}
+  .build-about-col{grid-column:span 2;}
+  .learnset-columns{grid-template-columns:repeat(2,1fr);}
+}
+@media(max-width:860px){
+  .build-columns{grid-template-columns:1fr;}
+  .build-about-col{grid-column:span 1;}
+  .learnset-columns{grid-template-columns:1fr;}
+  .poke-card img{width:min(200px,70%);}
+  .card-header{flex-wrap:wrap;}
+}
+@media(max-width:640px){
+  .navbar{grid-template-columns:1fr;min-height:auto;padding:12px 16px;gap:10px;}
+  .nav-brand{justify-self:center;font-size:22px;}
+  .search-wrap{width:100%;}
+  .search-box{width:100%;}
+  .quick-picks{justify-self:center;display:none;}
+  main{padding:12px 12px 60px;}
+  .layout{gap:12px;}
+  .card{padding:16px;border-radius:14px;}
+  .build-columns{gap:16px;}
+  .learnset-columns{gap:0 12px;}
+  .poke-card{border-radius:16px;padding:16px;}
+  .poke-card img{width:min(180px,60%);}
+  .poke-card .name{font-size:28px;}
+  .learn-row{font-size:12px;gap:8px;padding:8px 0;}
+  .learn-type-badge{font-size:8px;padding:1px 6px;}
+  .move-pill{padding:8px 12px;font-size:13px;}
+  .build-value{font-size:14px;}
+}
+@media(max-width:380px){
+  .navbar{padding:10px 12px;}
+  .nav-brand{font-size:20px;}
+  .search-box{height:40px;}
+  .search-box button{height:28px;padding:0 12px;font-size:12px;}
+  main{padding:8px 8px 40px;}
+  .poke-card img{width:min(160px,55%);}
+}
+</style>
+</head>
+<body>
+
+<div class="glow glow-tl"></div>
+<div class="glow glow-tr"></div>
+<div class="glow glow-bl"></div>
+<div class="glow glow-br"></div>
+<div class="glow glow-c"></div>
+
+<nav class="navbar">
+  <div class="nav-brand">MoveDex</div>
+  <div class="search-wrap">
+    <div class="search-box">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+      <input id="searchInput" type="text" placeholder="Search Pokémon..." autocomplete="off" />
+      <button id="searchBtn">Search</button>
+    </div>
+    <div class="autocomplete" id="acList"></div>
+  </div>
+  <div class="quick-picks">
+    <span class="chip" data-name="Garchomp">Garchomp</span>
+    <span class="chip" data-name="Dragapult">Dragapult</span>
+    <span class="chip" data-name="Great Tusk">Great Tusk</span>
+    <span class="chip" data-name="Gholdengo">Gholdengo</span>
+    <span class="chip" data-name="Miraidon">Miraidon</span>
+  </div>
+</nav>
+
+<main id="mainArea">
+  <div class="empty-state">
+    <svg width="64" height="64" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="3"/><line x1="5" y1="50" x2="95" y2="50" stroke="rgba(255,255,255,.08)" stroke-width="3"/><circle cx="50" cy="50" r="12" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="3"/><circle cx="50" cy="50" r="5" fill="rgba(255,255,255,.08)"/></svg>
+    <h2>Find the best build for any Pokémon</h2>
+    <p>Search above to see competitive builds, EV spreads, Tera types, and full level-up movepools.</p>
+  </div>
+</main>
+
+<script>
+const TYPE_COLORS={
+  normal:"#A8A878",fire:"#F08030",water:"#6890F0",electric:"#F8D030",
+  grass:"#78C850",ice:"#98D8D8",fighting:"#C03028",poison:"#A040A0",
+  ground:"#E0C068",flying:"#A890F0",psychic:"#F85888",bug:"#A8B820",
+  rock:"#B8A038",ghost:"#705898",dragon:"#7038F8",dark:"#705848",
+  steel:"#B8B8D0",fairy:"#EE99AC"
+};
+const STAT_COLORS={HP:'#FF5959',Atk:'#F5AC78',Def:'#FAE078',SpA:'#9DB7F5',SpD:'#A7DB8D',Spe:'#FA92B2'};
+
+const ICONS={
+  item:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="7" width="18" height="14" rx="2"/><path d="M8 7V5a4 4 0 0 1 8 0v2"/></svg>',
+  ability:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polygon points="12,2 15.09,8.26 22,9.27 17,14.14 18.18,21.02 12,17.77 5.82,21.02 7,14.14 2,9.27 8.91,8.26"/></svg>',
+  nature:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M11 20A7 7 0 0 1 9.8 6.9C15.5 4.9 17 3.5 19 2c1 2 2 4.5 1 8-1 3.5-5.6 5.3-9 6z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>',
+  tera:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M6 3h12l4 6-10 13L2 9z"/><path d="M2 9h20"/></svg>',
+  evs:'<svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="12" width="4" height="9" rx="1"/><rect x="10" y="7" width="4" height="14" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/></svg>',
+  sword:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M14.5 17.5L3 6V3h3l11.5 11.5"/><path d="M13 19l6-6"/><path d="M16 16l4 4"/><path d="M19 21l2-2"/></svg>',
+  link:'<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>'
+};
+
+const DEX={
+  "pikachu":{display:"Pikachu",api:"pikachu",tier:"NU / LC-adjacent",item:"Light Ball",ability:"Lightning Rod",nature:"Timid",evs:"252 SpA / 4 HP / 252 Spe",tera:"Water",moves:["Thunderbolt","Surf","Grass Knot","Volt Switch / Encore"],note:"Light Ball is mandatory — Pikachu is unusable without it. Lightning Rod lets it wall Electric attackers and boost its Sp. Atk for free."},
+  "raichu":{display:"Raichu",api:"raichu",tier:"NU",item:"Life Orb",ability:"Lightning Rod",nature:"Timid",evs:"252 SpA / 4 Def / 252 Spe",tera:"Fairy",moves:["Thunderbolt","Focus Blast","Grass Knot","Nasty Plot"],note:"Faster and bulkier than Pikachu but hits noticeably softer without Light Ball."},
+  "garchomp":{display:"Garchomp",api:"garchomp",tier:"OU",item:"Rocky Helmet",ability:"Rough Skin",nature:"Jolly",evs:"252 HP / 4 Def / 252 Spe",tera:"Fairy",moves:["Stealth Rock","Earthquake","Dragon Tail","Toxic / Fire Blast"],note:"Bulky pivot that punishes contact with Rough Skin + Rocky Helmet; Tera Fairy patches its Dragon/Fighting weakness."},
+  "great-tusk":{display:"Great Tusk",api:"great-tusk",tier:"OU",item:"Booster Energy",ability:"Protosynthesis",nature:"Jolly",evs:"252 Atk / 4 SpD / 252 Spe",tera:"Steel",moves:["Headlong Rush","Close Combat","Rapid Spin","Knock Off"],note:"One of the best hazard-removers and wallbreakers in OU. Booster Energy guarantees the Protosynthesis Speed boost turn one."},
+  "landorus-therian":{display:"Landorus-Therian",api:"landorus-therian",tier:"OU",item:"Rocky Helmet",ability:"Intimidate",nature:"Impish",evs:"252 HP / 240 Def / 16 Spe",tera:"Water",moves:["Stealth Rock","Earthquake","U-turn","Knock Off"],note:"Premier defensive pivot: Intimidate softens physical attackers while it sets Stealth Rock and pivots freely."},
+  "gholdengo":{display:"Gholdengo",api:"gholdengo",tier:"OU",item:"Air Balloon",ability:"Good as Gold",nature:"Modest",evs:"252 SpA / 4 SpD / 252 Spe",tera:"Steel",moves:["Make It Rain","Shadow Ball","Nasty Plot","Recover"],note:"Good as Gold blocks all status moves outright. Air Balloon covers its one weakness until popped."},
+  "kingambit":{display:"Kingambit",api:"kingambit",tier:"OU",item:"Black Glasses / Leftovers",ability:"Supreme Overlord",nature:"Adamant",evs:"252 Atk / 4 Def / 252 Spe",tera:"Flying",moves:["Swords Dance","Kowtow Cleave","Sucker Punch","Iron Head"],note:"Sucker Punch after Swords Dance cleans up weakened teams; Tera Flying removes its 4x Ground weakness for a surprise sweep."},
+  "iron-valiant":{display:"Iron Valiant",api:"iron-valiant",tier:"OU",item:"Booster Energy",ability:"Quark Drive",nature:"Naive",evs:"252 Atk / 4 SpA / 252 Spe",tera:"Fairy",moves:["Spirit Break","Close Combat","Thunderbolt","Encore"],note:"Mixed attacker that outruns most of the tier after its Speed boost and breaks past both physical and special walls."},
+  "dragapult":{display:"Dragapult",api:"dragapult",tier:"OU",item:"Choice Specs",ability:"Infiltrator",nature:"Timid",evs:"252 SpA / 4 SpD / 252 Spe",tera:"Ghost",moves:["Draco Meteor","Shadow Ball","Flamethrower","U-turn"],note:"Infiltrator lets it shred behind Substitute/screens; Choice Specs punishes any switch-in that isn't immune."},
+  "zamazenta":{display:"Zamazenta (Crowned Shield)",api:"zamazenta-crowned",tier:"Ubers",item:"Rusted Shield",ability:"Dauntless Shield",nature:"Adamant",evs:"252 Atk / 4 Def / 252 Spe",tera:"Fighting",moves:["Behemoth Bash","Close Combat","Iron Head","Crunch"],note:"Rusted Shield boosts Defense on switch-in, letting it tank hits while Behemoth Bash doubles vs. its own boosted Defense."},
+  "koraidon":{display:"Koraidon",api:"koraidon",tier:"Ubers",item:"Clear Amulet",ability:"Orichalcum Pulse",nature:"Jolly",evs:"252 Atk / 4 SpD / 252 Spe",tera:"Fire",moves:["Flare Blitz","Close Combat","Scale Shot","Flame Charge"],note:"Auto-Sun from its ability boosts its own Fire moves; Clear Amulet blocks the stat-drops it would normally take from recoil moves/hazing."},
+  "miraidon":{display:"Miraidon",api:"miraidon",tier:"Ubers",item:"Choice Specs",ability:"Hadron Engine",nature:"Modest",evs:"252 SpA / 4 SpD / 252 Spe",tera:"Fairy",moves:["Electro Drift","Draco Meteor","Volt Switch","Overheat"],note:"Hadron Engine gives a free power boost on its own Electric Terrain; Electro Drift nukes anything not 4x resistant."},
+  "ting-lu":{display:"Ting-Lu",api:"ting-lu",tier:"OU",item:"Leftovers",ability:"Vessel of Ruin",nature:"Impish",evs:"252 HP / 252 Def / 4 SpD",tera:"Water",moves:["Ruination","Earthquake","Stealth Rock","Whirlwind"],note:"Vessel of Ruin lowers every other Pokémon's Sp. Atk, and Ruination chops half the target's current HP regardless of stats."},
+  "ogerpon-wellspring":{display:"Ogerpon (Wellspring Mask)",api:"ogerpon-wellspring-mask",tier:"OU",item:"Wellspring Mask",ability:"Water Absorb",nature:"Jolly",evs:"252 Atk / 4 SpD / 252 Spe",tera:"Water",moves:["Swords Dance","Ivy Cudgel","Horn Leech","Play Rough"],note:"Terastallizing to Water turns Ivy Cudgel into a same-type STAB nuke backed by the mask's terrain-based Defense boost."},
+  "iron-moth":{display:"Iron Moth",api:"iron-moth",tier:"OU",item:"Booster Energy",ability:"Quark Drive",nature:"Timid",evs:"252 SpA / 4 Def / 252 Spe",tera:"Grass",moves:["Fiery Dance","Sludge Wave","Energy Ball","Morning Sun"],note:"Fiery Dance has a 50% chance to boost Sp. Atk further, snowballing quickly once its Speed boost kicks in."},
+  "toxapex":{display:"Toxapex",api:"toxapex",tier:"OU",item:"Black Sludge",ability:"Regenerator",nature:"Calm",evs:"252 HP / 252 SpD / 4 Def",tera:"Water",moves:["Toxic Spikes","Scald","Recover","Haze"],note:"Best special wall in the tier; Regenerator keeps it healthy as it pivots in and out to spread poison damage."},
+  "corviknight":{display:"Corviknight",api:"corviknight",tier:"OU",item:"Leftovers",ability:"Pressure",nature:"Impish",evs:"252 HP / 252 Def / 4 SpD",tera:"Steel",moves:["Roost","Defog","U-turn","Body Press"],note:"Reliable Defog + pivot core piece; Body Press punishes physical attackers that try to switch in."},
+  "rotom-wash":{display:"Rotom-Wash",api:"rotom-wash",tier:"OU",item:"Leftovers",ability:"Levitate",nature:"Bold",evs:"252 HP / 252 Def / 4 SpA",tera:"Water",moves:["Volt Switch","Hydro Pump","Will-O-Wisp","Pain Split"],note:"Ground immunity plus two useful resistances make it one of the safest pivots into physical attackers."},
+  "heatran":{display:"Heatran",api:"heatran",tier:"OU",item:"Leftovers",ability:"Flash Fire",nature:"Calm",evs:"252 HP / 252 SpD / 4 Def",tera:"Grass",moves:["Magma Storm","Earth Power","Stealth Rock","Taunt"],note:"Immune to burn and absorbs Fire moves for free; Tera Grass removes its Ground weakness entirely."},
+  "clefable":{display:"Clefable",api:"clefable",tier:"OU",item:"Leftovers",ability:"Magic Guard",nature:"Bold",evs:"252 HP / 252 Def / 4 SpD",tera:"Fairy",moves:["Moonblast","Soft-Boiled","Stealth Rock","Thunder Wave"],note:"Magic Guard ignores hazard/status/Life Orb chip damage, making it an extremely reliable Stealth Rock setter."},
+  "skarmory":{display:"Skarmory",api:"skarmory",tier:"OU",item:"Rocky Helmet",ability:"Sturdy",nature:"Impish",evs:"252 HP / 252 Def / 4 SpD",tera:"Steel",moves:["Spikes","Roost","Whirlwind","Body Press"],note:"Premier physical wall and hazard-setter; Rocky Helmet punishes anything that clicks a contact move on it."},
+  "ferrothorn":{display:"Ferrothorn",api:"ferrothorn",tier:"OU",item:"Leftovers",ability:"Iron Barbs",nature:"Relaxed",evs:"252 HP / 252 Def / 4 SpD",tera:"Fairy",moves:["Spikes","Leech Seed","Gyro Ball","Body Press"],note:"Leech Seed + Iron Barbs grinds down anything that stays in; Gyro Ball rewards its poor base Speed."},
+  "hydreigon":{display:"Hydreigon",api:"hydreigon",tier:"OU",item:"Heavy-Duty Boots",ability:"Levitate",nature:"Timid",evs:"252 SpA / 4 SpD / 252 Spe",tera:"Dark",moves:["Draco Meteor","Dark Pulse","Flash Cannon","U-turn"],note:"Near-perfect coverage with only three common resistances in the tier; Boots dodge Stealth Rock and Spikes chip."},
+  "volcarona":{display:"Volcarona",api:"volcarona",tier:"OU",item:"Heavy-Duty Boots",ability:"Flame Body",nature:"Timid",evs:"252 SpA / 4 Def / 252 Spe",tera:"Ground",moves:["Quiver Dance","Fiery Dance","Bug Buzz","Giga Drain"],note:"Quiver Dance boosts Sp. Atk, Sp. Def and Speed at once, and Tera Ground removes its double Stealth Rock weakness."},
+  "excadrill":{display:"Excadrill",api:"excadrill",tier:"OU",item:"Focus Sash",ability:"Mold Breaker",nature:"Adamant",evs:"252 Atk / 4 SpD / 252 Spe",tera:"Fire",moves:["Swords Dance","Earthquake","Iron Head","Rapid Spin"],note:"Mold Breaker ignores Levitate and abilities like Sturdy/Storm Drain, letting Earthquake hit almost everything."},
+  "greninja":{display:"Greninja",api:"greninja",tier:"OU",item:"Choice Specs",ability:"Protean",nature:"Timid",evs:"252 SpA / 4 SpD / 252 Spe",tera:"Water",moves:["Hydro Pump","Dark Pulse","Ice Beam","U-turn"],note:"Protean makes every attack same-type, so coverage moves hit as hard as STAB — very few safe switch-ins."},
+  "salamence":{display:"Salamence",api:"salamence",tier:"OU",item:"Choice Scarf",ability:"Intimidate",nature:"Naive",evs:"252 Atk / 4 SpA / 252 Spe",tera:"Fairy",moves:["Draco Meteor","Earthquake","Flamethrower","Dragon Claw"],note:"Choice Scarf plus Intimidate lets it revenge kill most Dragon Dance/setup sweepers before they get going."},
+  "metagross":{display:"Metagross",api:"metagross",tier:"UU / OU-viable",item:"Assault Vest",ability:"Clear Body",nature:"Adamant",evs:"252 Atk / 252 HP / 4 SpD",tera:"Steel",moves:["Meteor Mash","Bullet Punch","Zen Headbutt","Earthquake"],note:"Assault Vest turns it into a special-wall-breaker hybrid that shrugs off special hits while still hitting hard."},
+  "tyranitar":{display:"Tyranitar",api:"tyranitar",tier:"OU",item:"Assault Vest",ability:"Sand Stream",nature:"Careful",evs:"252 HP / 4 Def / 252 SpD",tera:"Water",moves:["Stone Edge","Crunch","Earthquake","Ice Punch"],note:"Sand Stream chips foes each turn and boosts its own Sp. Def; Assault Vest makes it a bulky special sponge."},
+  "gyarados":{display:"Gyarados",api:"gyarados",tier:"UU",item:"Life Orb",ability:"Moxie",nature:"Jolly",evs:"252 Atk / 4 SpD / 252 Spe",tera:"Ground",moves:["Dragon Dance","Waterfall","Earthquake","Ice Fang"],note:"Moxie snowballs its Attack every KO; Tera Ground removes its Electric weakness while boosting Earthquake."},
+  "charizard":{display:"Charizard",api:"charizard",tier:"UU",item:"Heavy-Duty Boots",ability:"Solar Power / Blaze",nature:"Timid",evs:"252 SpA / 4 Def / 252 Spe",tera:"Fire",moves:["Fire Blast","Focus Blast","Air Slash","Roost"],note:"Boots keep it clear of Stealth Rock, its worst matchup, while it chips away with strong special coverage."},
+  "blastoise":{display:"Blastoise",api:"blastoise",tier:"NU / RU",item:"Leftovers",ability:"Torrent",nature:"Bold",evs:"252 HP / 252 Def / 4 SpA",tera:"Water",moves:["Scald","Rapid Spin","Ice Beam","Flip Turn"],note:"Reliable special-wall/spinner. Scald's burn chance discourages physical attackers from switching in."},
+  "venusaur":{display:"Venusaur",api:"venusaur",tier:"UU",item:"Black Sludge",ability:"Chlorophyll",nature:"Bold",evs:"252 HP / 252 Def / 4 SpA",tera:"Fairy",moves:["Giga Drain","Sludge Bomb","Sleep Powder","Leech Seed"],note:"Solid defensive typing with recovery via Giga Drain/Leech Seed; Chlorophyll gives a sun-sweeper option too."},
+  "mewtwo":{display:"Mewtwo",api:"mewtwo",tier:"Ubers",item:"Life Orb",ability:"Unnerve",nature:"Timid",evs:"252 SpA / 4 SpD / 252 Spe",tera:"Ice",moves:["Psystrike","Ice Beam","Aura Sphere","Recover"],note:"Psystrike hits the target's physical Defense stat for huge damage even from a special attacker."},
+  "mew":{display:"Mew",api:"mew",tier:"OU / flexible",item:"Leftovers",ability:"Synchronize",nature:"Bold",evs:"252 HP / 252 Def / 4 SpD",tera:"Flexible",moves:["Stealth Rock","Roost","Will-O-Wisp","U-turn"],note:"Huge movepool lets Mew fill almost any role a team needs — this is a generic defensive utility spread."},
+  "rayquaza":{display:"Rayquaza",api:"rayquaza",tier:"Ubers (banned in most official rules)",item:"Life Orb",ability:"Air Lock",nature:"Naive",evs:"252 Atk / 4 SpA / 252 Spe",tera:"Normal",moves:["Dragon Ascent","Earthquake","Extreme Speed","Swords Dance"],note:"Air Lock negates all weather effects on the field; Dragon Ascent hits like a truck without needing an item slot."}
+};
+
+const ALIASES={
+  "lando-t":"landorus-therian","landorus therian":"landorus-therian","landorus-t":"landorus-therian",
+  "great tusk":"great-tusk","gtusk":"great-tusk","ting lu":"ting-lu",
+  "iron valiant":"iron-valiant","ogerpon wellspring":"ogerpon-wellspring","ogerpon-wellspring-mask":"ogerpon-wellspring","wellspring ogerpon":"ogerpon-wellspring",
+  "iron moth":"iron-moth","rotom wash":"rotom-wash","rotom-w":"rotom-wash",
+  "zamazenta crowned":"zamazenta","zamazenta-crowned":"zamazenta","zamazenta crowned shield":"zamazenta"
+};
+
+function normalize(str){
+  let s=str.trim().toLowerCase();
+  if(ALIASES[s])return ALIASES[s];
+  s=s.replace(/[.']/g,"").replace(/\s+/g,"-");
+  if(ALIASES[s])return ALIASES[s];
+  return s;
+}
+function titleCase(s){return s.split('-').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ');}
+function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
+function typeBadges(types){return types.map(t=>`<span class="type-badge" style="background:${TYPE_COLORS[t]||'#888'}">${t.toUpperCase()}</span>`).join('');}
+
+function parseEVs(evString){
+  return evString.split('/').map(part=>{
+    const m=part.trim().match(/^(\d+)\s+(\w+)$/);
+    if(!m)return null;
+    return{value:parseInt(m[1]),stat:m[2],color:STAT_COLORS[m[2]]||'#888'};
+  }).filter(Boolean);
+}
+
+const VERSION_GROUP_PREFERENCE=[
+  ['scarlet-violet','Scarlet/Violet'],['sword-shield','Sword/Shield'],
+  ['ultra-sun-ultra-moon','Ultra Sun/Ultra Moon'],['sun-moon','Sun/Moon'],
+  ['omega-ruby-alpha-sapphire','Omega Ruby/Alpha Sapphire'],['x-y','X/Y']
+];
+
+function buildLevelUpMoves(poke){
+  for(const[gk,gl]of VERSION_GROUP_PREFERENCE){
+    const found=new Map();
+    poke.moves.forEach(m=>{m.version_group_details.forEach(vgd=>{
+      if(vgd.move_learn_method.name==='level-up'&&vgd.version_group.name===gk){
+        const l=vgd.level_learned_at;
+        const e=found.get(m.move.name);
+        if(e===undefined||l<found.get(m.move.name))found.set(m.move.name,l);
+      }
+    });});
+    if(found.size>0){
+      const list=Array.from(found.entries()).map(([n,l])=>({name:titleCase(n),level:l}));
+      list.sort((a,b)=>a.level-b.level);
+      return{list,groupLabel:gl};
+    }
+  }
+  return{list:[],groupLabel:null};
+}
+
+async function fetchDexEntry(url){
+  try{
+    const r=await fetch(url);if(!r.ok)return'';
+    const d=await r.json();
+    const pref=['scarlet','violet','sword','shield'];
+    let e=d.flavor_text_entries.find(x=>x.language.name==='en'&&pref.some(g=>x.version.name.includes(g)));
+    if(!e)e=d.flavor_text_entries.find(x=>x.language.name==='en');
+    return e?e.flavor_text.replace(/[\n\f]/g,' ').trim():'';
+  }catch{return'';}
+}
+
+async function fetchAllMoveTypes(poke,curatedMoves){
+  const urlMap={};
+  poke.moves.forEach(m=>{urlMap[m.move.name]=m.move.url;});
+  const names=new Set();
+  if(curatedMoves)curatedMoves.forEach(m=>m.split('/').forEach(p=>names.add(p.trim())));
+  const{list}=buildLevelUpMoves(poke);
+  list.forEach(mv=>names.add(mv.name));
+  const results=await Promise.all([...names].map(name=>{
+    const api=name.toLowerCase().replace(/\s+/g,'-');
+    const url=urlMap[api];
+    if(!url)return Promise.resolve({name,type:null});
+    return fetch(url).then(r=>r.json()).then(d=>({name,type:d.type.name})).catch(()=>({name,type:null}));
+  }));
+  const map={};
+  results.forEach(r=>{if(r.type)map[r.name]=r.type;});
+  return map;
+}
+
+function splitCols(arr,n){
+  const cols=Array.from({length:n},()=>[]);
+  arr.forEach((item,i)=>cols[i%n].push(item));
+  return cols;
+}
+
+const mainArea=document.getElementById('mainArea');
+const inputEl=document.getElementById('searchInput');
+const btnEl=document.getElementById('searchBtn');
+
+function renderLoading(){
+  mainArea.innerHTML='<div class="loading-state"><div class="spinner"></div>Looking up Pokémon…</div>';
+}
+function renderError(name){
+  mainArea.innerHTML=`<div class="error-state"><strong>Couldn't find "${escapeHtml(name)}"</strong><span>Check the spelling and try again.</span></div>`;
+}
+
+function genericAdviceFor(types){
+  const t=types[0];
+  const a={
+    fire:"Fire-types usually want Choice Specs/Band or Heavy-Duty Boots to dodge Stealth Rock.",
+    water:"Water-types often run Leftovers or Assault Vest as bulky pivots with Scald/Surf and recovery.",
+    grass:"Grass-types typically want Leftovers with Giga Drain/Synthesis or Life Orb for offensive sets.",
+    electric:"Electric-types usually favor Choice Specs/Scarf or Life Orb, backed by coverage for Ground-types.",
+    ice:"Ice-types are commonly frail attackers — Choice Scarf or Life Orb to hit hard before they faint.",
+    fighting:"Fighting-types often carry Life Orb or Assault Vest with strong STAB plus Flying/Psychic coverage.",
+    poison:"Poison-types tend toward defensive Leftovers sets with Toxic Spikes or recovery to stall.",
+    ground:"Ground-types often run Choice Scarf/Band for Earthquake, or bulky Leftovers with Stealth Rock.",
+    flying:"Flying-types usually want Heavy-Duty Boots to avoid Stealth Rock, paired with U-turn/Defog.",
+    psychic:"Psychic-types commonly use Life Orb or Choice Specs with Recover/Calm Mind as setup.",
+    bug:"Bug-types often carry Heavy-Duty Boots and a setup move like Quiver Dance if available.",
+    rock:"Rock-types generally run bulky Leftovers sets focused on Stealth Rock and neutral coverage.",
+    ghost:"Ghost-types often use Choice Specs/Scarf backed by Infiltrator utility past Substitutes/screens.",
+    dragon:"Dragon-types usually want Choice Scarf/Specs with Tera to patch Fairy/Ice weaknesses.",
+    dark:"Dark-types often run Choice Band/Specs or Swords Dance with Sucker Punch priority.",
+    steel:"Steel-types are usually bulky Leftovers pivots with hazards or Body Press support.",
+    fairy:"Fairy-types commonly run Leftovers defensive sets with Moonblast and recovery.",
+    normal:"Normal-types vary — check for a signature ability or move that defines their preferred set."
+  };
+  return a[t]||"Check its base stats and typing to decide between offensive (Choice Specs/Band/Life Orb) and defensive (Leftovers/Boots) items.";
+}
+
+async function lookup(rawName){
+  if(!rawName||!rawName.trim()){renderEmpty();return;}
+  renderLoading();
+  const key=normalize(rawName);
+  const entry=DEX[key];
+  const apiSlug=entry?entry.api:key;
+  let poke;
+  try{
+    const res=await fetch(`https://pokeapi.co/api/v2/pokemon/${encodeURIComponent(apiSlug)}`);
+    if(!res.ok)throw new Error('not found');
+    poke=await res.json();
+  }catch(e){renderError(rawName);return;}
+
+  const sprite=(poke.sprites.other&&poke.sprites.other['official-artwork']&&poke.sprites.other['official-artwork'].front_default)||poke.sprites.front_default;
+  const types=poke.types.map(t=>t.type.name);
+  const displayName=entry?entry.display:poke.name.split('-').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ');
+  const dexNum='#'+String(poke.id).padStart(3,'0');
+  const height=(poke.height/10).toFixed(1)+' m';
+  const weight=(poke.weight/10).toFixed(1)+' kg';
+
+  const[dexEntry,typeMap]=await Promise.all([
+    fetchDexEntry(poke.species.url),
+    fetchAllMoveTypes(poke,entry?entry.moves:null)
+  ]);
+
+  const smogonUrl=`https://www.smogon.com/dex/sv/pokemon/${poke.name}/`;
+
+  let buildHtml;
+  if(entry){
+    const evs=parseEVs(entry.evs);
+    const total=evs.reduce((s,e)=>s+e.value,0);
+    const evBar=evs.map(e=>`<div class="ev-segment" style="width:${(e.value/total*100).toFixed(1)}%;background:${e.color}" title="${e.stat}: ${e.value}"></div>`).join('');
+
+    const statRows=[
+      {icon:ICONS.item,label:'Item',value:entry.item},
+      {icon:ICONS.ability,label:'Ability',value:entry.ability},
+      {icon:ICONS.nature,label:'Nature',value:entry.nature},
+      {icon:ICONS.tera,label:'Tera Type',value:entry.tera},
+    ];
+
+    const statsHtml=statRows.map(r=>`
+      <div class="build-row">
+        <div class="build-row-header">${r.icon}<span class="build-label">${r.label}</span></div>
+        <div class="build-value">${r.value}</div>
+      </div>`).join('')+`
+      <div class="build-row">
+        <div class="build-row-header">${ICONS.evs}<span class="build-label">EV Spread</span></div>
+        <div class="build-value">${entry.evs}</div>
+        <div class="ev-bar">${evBar}</div>
+      </div>`;
+
+    const movesHtml=entry.moves.map(m=>{
+      const primary=m.split('/')[0].trim();
+      const t=typeMap[primary];
+      const tc=t?TYPE_COLORS[t]:null;
+      return`<div class="move-pill">${ICONS.sword}<span>${escapeHtml(m)}</span>${tc?`<span class="move-type-badge" style="background:${tc}">${t.toUpperCase()}</span>`:''}</div>`;
+    }).join('');
+
+    buildHtml=`
+      <div class="card">
+        <div class="card-header"><h2>Competitive Build</h2><span class="tier-pill">${entry.tier}</span></div>
+        <div class="build-columns">
+          <div class="build-col">${statsHtml}</div>
+          <div class="build-col">
+            <div class="build-col-title">${ICONS.sword} Moveset</div>
+            <div style="display:flex;flex-direction:column;gap:8px">${movesHtml}</div>
+          </div>
+          <div class="build-col build-about-col">
+            <div class="build-col-title">About This Build</div>
+            <p class="about-text">${entry.note}</p>
+            <a class="smogon-btn" href="${smogonUrl}" target="_blank" rel="noopener">View on Smogon ${ICONS.link}</a>
+          </div>
+        </div>
+      </div>`;
+  } else {
+    buildHtml=`
+      <div class="card">
+        <div class="card-header"><h2>Competitive Build</h2></div>
+        <span class="fallback-tag">No curated set yet</span>
+        <div class="fallback-note">
+          Based on its ${types.join('/')} typing: ${genericAdviceFor(types)}<br><br>
+          For an exact, up-to-date competitive set, check <a class="smogon-link" href="${smogonUrl}" target="_blank" rel="noopener">Smogon's Strategy Dex →</a>
+        </div>
+      </div>`;
+  }
+
+  const{list:learnList,groupLabel}=buildLevelUpMoves(poke);
+  let learnHtml;
+  if(learnList.length===0){
+    learnHtml=`<div class="card"><div class="card-header"><h2>Level-Up Learnset</h2></div><div class="learnset-grid-empty">No level-up learnset data available.</div></div>`;
+  } else {
+    const rows=learnList.map(mv=>{
+      const t=typeMap[mv.name];
+      const tc=t?TYPE_COLORS[t]:null;
+      const lv=mv.level===0?'Evo':mv.level;
+      return`<div class="learn-row"><span class="lv">${lv}</span><span class="mv">${escapeHtml(mv.name)}</span>${tc?`<span class="learn-type-badge" style="background:${tc}">${t.toUpperCase()}</span>`:''}</div>`;
+    }).join('');
+    const cols=splitCols(learnList.length>0?learnList.map((mv,i)=>rows.split('</div>').filter(Boolean).length?i:-1):[],3);
+    const colHtml=splitCols(learnList,3).map(col=>{
+      return col.map(mv=>{
+        const t=typeMap[mv.name];
+        const tc=t?TYPE_COLORS[t]:null;
+        const lv=mv.level===0?'Evo':mv.level;
+        return`<div class="learn-row"><span class="lv">${lv}</span><span class="mv">${escapeHtml(mv.name)}</span>${tc?`<span class="learn-type-badge" style="background:${tc}">${t.toUpperCase()}</span>`:''}</div>`;
+      }).join('');
+    });
+
+    learnHtml=`
+      <div class="card">
+        <div class="card-header"><h2>Level-Up Learnset</h2></div>
+        <div class="learnset-sub">${groupLabel} — ${learnList.length} moves, lowest level first</div>
+        <div class="learnset-columns">${colHtml.map(c=>`<div>${c}</div>`).join('')}</div>
+      </div>`;
+  }
+
+  mainArea.innerHTML=`
+    <div class="layout">
+      <aside class="poke-card">
+        <img src="${sprite}" alt="${displayName}" onerror="this.style.display='none'">
+        <div class="dex-num">${dexNum}</div>
+        <div class="name">${displayName}</div>
+        <div class="types">${typeBadges(types)}</div>
+        <div class="poke-stats">
+          <div class="poke-stat"><div class="stat-label">Height</div><div class="stat-value">${height}</div></div>
+          <div class="poke-stat"><div class="stat-label">Weight</div><div class="stat-value">${weight}</div></div>
+        </div>
+        ${dexEntry?`<p class="poke-dex-entry">${escapeHtml(dexEntry)}</p>`:''}
+      </aside>
+      <div class="content-col">
+        ${buildHtml}
+        ${learnHtml}
+      </div>
+    </div>`;
+}
+
+function renderEmpty(){
+  mainArea.innerHTML=`
+    <div class="empty-state">
+      <svg width="64" height="64" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="3"/><line x1="5" y1="50" x2="95" y2="50" stroke="rgba(255,255,255,.08)" stroke-width="3"/><circle cx="50" cy="50" r="12" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="3"/><circle cx="50" cy="50" r="5" fill="rgba(255,255,255,.08)"/></svg>
+      <h2>Find the best build for any Pokémon</h2>
+      <p>Search above to see competitive builds, EV spreads, Tera types, and full level-up movepools.</p>
+    </div>`;
+}
+
+btnEl.addEventListener('click',()=>{closeAC();lookup(inputEl.value);});
+inputEl.addEventListener('keydown',e=>{
+  if(e.key==='Enter'){
+    if(acIdx>=0&&acItems[acIdx]){selectAC(acItems[acIdx]);}
+    else{closeAC();lookup(inputEl.value);}
+    return;
+  }
+  if(e.key==='ArrowDown'){e.preventDefault();moveAC(1);}
+  if(e.key==='ArrowUp'){e.preventDefault();moveAC(-1);}
+  if(e.key==='Escape'){closeAC();}
+});
+document.querySelectorAll('.chip').forEach(chip=>{
+  chip.addEventListener('click',()=>{inputEl.value=chip.dataset.name;closeAC();lookup(chip.dataset.name);});
+});
+
+const acList=document.getElementById('acList');
+let pokeCache=[];
+let acItems=[];
+let acIdx=-1;
+
+async function loadPokeCache(){
+  try{
+    const r=await fetch('https://pokeapi.co/api/v2/pokemon?limit=1025');
+    const d=await r.json();
+    pokeCache=d.results.map(p=>{
+      const m=p.url.match(/\/(\d+)\/?$/);
+      const id=m?parseInt(m[1]):0;
+      return{name:p.name.split('-').map(w=>w[0].toUpperCase()+w.slice(1)).join(' '),slug:p.name,id};
+    });
+  }catch(e){}
+}
+
+function filterPoke(q){
+  if(!q)return pokeCache.filter(p=>DEX[p.slug]);
+  const s=q.toLowerCase();
+  return pokeCache.filter(p=>p.name.toLowerCase().includes(s)||p.slug.includes(s)).slice(0,8);
+}
+
+function spriteUrl(id){return`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;}
+
+function showAC(items){
+  acItems=items;acIdx=-1;
+  if(!items.length){acList.classList.remove('open');return;}
+  acList.innerHTML=items.map((p,i)=>{
+    const inDex=DEX[p.slug];
+    return`<div class="ac-item" data-idx="${i}"><img src="${spriteUrl(p.id)}" alt="" loading="lazy"><span class="ac-name">${p.name}</span>${inDex?`<span class="ac-id">${inDex.tier}</span>`:''}</div>`;
+  }).join('');
+  acList.classList.add('open');
+  acList.querySelectorAll('.ac-item').forEach(el=>{
+    el.addEventListener('mousedown',e=>{e.preventDefault();selectAC(items[parseInt(el.dataset.idx)]);});
+  });
+}
+
+function selectAC(p){
+  inputEl.value=p.name;closeAC();lookup(p.name);
+}
+function moveAC(d){
+  if(!acItems.length)return;
+  acIdx=Math.max(-1,Math.min(acItems.length-1,acIdx+d));
+  acList.querySelectorAll('.ac-item').forEach((el,i)=>{
+    el.classList.toggle('sel',i===acIdx);
+    if(i===acIdx)el.scrollIntoView({block:'nearest'});
+  });
+}
+function closeAC(){acList.classList.remove('open');acItems=[];acIdx=-1;}
+
+inputEl.addEventListener('input',()=>{
+  const q=inputEl.value.trim();
+  const items=filterPoke(q);
+  showAC(items);
+});
+document.addEventListener('click',e=>{
+  if(!e.target.closest('.search-wrap'))closeAC();
+});
+
+loadPokeCache();
+</script>
+</body>
+</html>
