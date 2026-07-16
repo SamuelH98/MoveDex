@@ -619,11 +619,13 @@ let gridFiltered=[];
 const GRID_BATCH=150;
 
 function spriteUrl(id){return`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;}
+function animatedSpriteUrl(id){return`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${id}.gif`;}
 
 function makeGridItem(p){
   const inDex=DEX[p.slug];
+  const animated=p.id<=649;
   return`<div class="poke-grid-item${inDex?' has-build':''}" data-slug="${p.slug}" data-name="${escapeHtml(p.name)}">
-    <img data-src="${spriteUrl(p.id)}" alt="${escapeHtml(p.name)}">
+    <img data-src="${animated?animatedSpriteUrl(p.id):spriteUrl(p.id)}" data-fallback="${spriteUrl(p.id)}" alt="${escapeHtml(p.name)}">
     <span class="grid-id">#${String(p.id).padStart(3,'0')}</span>
     <span class="grid-name">${escapeHtml(p.name)}</span>
   </div>`;
@@ -636,7 +638,13 @@ function loadVisibleImages(){
       img.src=img.dataset.src;
       img.removeAttribute('data-src');
       img.onload=()=>img.classList.add('loaded');
-      img.onerror=()=>img.classList.add('loaded');
+      img.onerror=()=>{
+        if(img.dataset.fallback){
+          img.src=img.dataset.fallback;
+          img.removeAttribute('data-fallback');
+        }
+        img.classList.add('loaded');
+      };
     }
   });
 }
