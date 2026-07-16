@@ -764,45 +764,43 @@ function renderGrid(filter){
     if(item)lookup(item.dataset.name);
   });
   let evoHoverTimer=null;
-  if(matchMedia('(hover:hover)').matches){
-    grid.addEventListener('mouseenter',async e=>{
-      const item=e.target.closest('.poke-grid-item');
-      if(!item)return;
-      clearTimeout(evoHoverTimer);
-      clearEvoHighlight();
-      const img=item.querySelector('img');
-      if(img&&!img.src.includes('.gif')&&item.dataset.animated){
-        img.dataset.staticSrc=img.src;
-        img.src=item.dataset.animated;
+  grid.addEventListener('mouseenter',async e=>{
+    const item=e.target.closest('.poke-grid-item');
+    if(!item)return;
+    clearTimeout(evoHoverTimer);
+    clearEvoHighlight();
+    const img=item.querySelector('img');
+    if(img&&!img.src.includes('.gif')&&item.dataset.animated){
+      img.dataset.staticSrc=img.src;
+      img.src=item.dataset.animated;
+    }
+    const poke=pokeCache.find(p=>p.id===parseInt(item.dataset.id));
+    if(!poke)return;
+    const speciesUrl=`https://pokeapi.co/api/v2/pokemon-species/${poke.id}`;
+    const ids=await getEvoChainIds(speciesUrl);
+    if(!ids||ids.length<=1)return;
+    const gridEl=mainArea.querySelector('.poke-grid');
+    if(!gridEl)return;
+    ids.forEach(evoId=>{
+      if(evoId===parseInt(item.dataset.id))return;
+      const match=gridEl.querySelector(`.poke-grid-item[data-id="${evoId}"]`);
+      if(!match)return;
+      match.classList.add('evo-highlight');
+      const evoImg=match.querySelector('img');
+      if(evoImg&&match.dataset.animated&&!evoImg.src.includes('.gif')){
+        evoImg.dataset.staticSrc=evoImg.src;
+        evoImg.src=match.dataset.animated;
       }
-      const poke=pokeCache.find(p=>p.id===parseInt(item.dataset.id));
-      if(!poke)return;
-      const speciesUrl=`https://pokeapi.co/api/v2/pokemon-species/${poke.id}`;
-      const ids=await getEvoChainIds(speciesUrl);
-      if(!ids||ids.length<=1)return;
-      const gridEl=mainArea.querySelector('.poke-grid');
-      if(!gridEl)return;
-      ids.forEach(evoId=>{
-        if(evoId===parseInt(item.dataset.id))return;
-        const match=gridEl.querySelector(`.poke-grid-item[data-id="${evoId}"]`);
-        if(!match)return;
-        match.classList.add('evo-highlight');
-        const evoImg=match.querySelector('img');
-        if(evoImg&&match.dataset.animated&&!evoImg.src.includes('.gif')){
-          evoImg.dataset.staticSrc=evoImg.src;
-          evoImg.src=match.dataset.animated;
-        }
-      });
-    },true);
-    grid.addEventListener('mouseleave',e=>{
-      const item=e.target.closest('.poke-grid-item');
-      if(!item)return;
-      clearTimeout(evoHoverTimer);
-      evoHoverTimer=setTimeout(clearEvoHighlight,100);
-      const img=item.querySelector('img');
-      if(img&&img.dataset.staticSrc){img.src=img.dataset.staticSrc;delete img.dataset.staticSrc;}
-    },true);
-  }
+    });
+  },true);
+  grid.addEventListener('mouseleave',e=>{
+    const item=e.target.closest('.poke-grid-item');
+    if(!item)return;
+    clearTimeout(evoHoverTimer);
+    evoHoverTimer=setTimeout(clearEvoHighlight,100);
+    const img=item.querySelector('img');
+    if(img&&img.dataset.staticSrc){img.src=img.dataset.staticSrc;delete img.dataset.staticSrc;}
+  },true);
   if(gridBatchIdx<gridFiltered.length){
     const sentinel=document.getElementById('gridLoader');
     gridObserver=new IntersectionObserver(()=>{
