@@ -267,29 +267,30 @@ main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px cla
 .set-btn.active{background:rgba(47,111,237,.2);border-color:rgba(47,111,237,.5);color:var(--white);}
 
 /* ── Evolution Chain ───────────────────────────────────── */
-.evo-section{margin-top:0;}
+.evo-section{margin-top:16px;padding-top:16px;border-top:1px solid rgba(255,255,255,.08);}
 .evo-section-title{
-  font-size:12px;color:var(--text-muted);text-transform:uppercase;
-  letter-spacing:.5px;font-weight:600;margin-bottom:12px;
-  display:flex;align-items:center;gap:8px;
+  font-size:11px;color:var(--text-muted);text-transform:uppercase;
+  letter-spacing:.5px;font-weight:600;margin-bottom:10px;
+  display:flex;align-items:center;gap:6px;
 }
-.evo-chain{display:flex;align-items:center;gap:6px;flex-wrap:wrap;}
+.evo-chain{display:flex;flex-direction:column;gap:6px;}
 .evo-node{
-  display:flex;flex-direction:column;align-items:center;gap:4px;
+  display:flex;align-items:center;gap:8px;
   background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
-  border-radius:12px;padding:10px 12px 8px;cursor:pointer;
-  transition:all .15s ease;min-width:70px;
+  border-radius:10px;padding:8px 10px;cursor:pointer;
+  transition:all .15s ease;
 }
 .evo-node:hover{background:rgba(47,111,237,.15);border-color:rgba(47,111,237,.3);}
 .evo-node.current{border-color:rgba(47,111,237,.5);background:rgba(47,111,237,.12);}
-.evo-node img{width:48px;height:48px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));image-rendering:pixelated;}
-.evo-node .evo-name{font-size:10px;color:var(--text-secondary);font-weight:600;text-align:center;white-space:nowrap;}
-.evo-node .evo-detail{font-size:9px;color:var(--text-muted);text-align:center;}
-.evo-arrow{
-  color:var(--text-muted);flex-shrink:0;display:flex;align-items:center;flex-direction:column;gap:2px;
+.evo-node img{width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));image-rendering:pixelated;flex-shrink:0;}
+.evo-node .evo-info{display:flex;flex-direction:column;gap:1px;min-width:0;}
+.evo-node .evo-name{font-size:11px;color:var(--text-secondary);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.evo-node .evo-detail{font-size:9px;color:var(--text-muted);}
+.evo-arrow-down{
+  color:var(--text-muted);display:flex;align-items:center;justify-content:center;
+  padding:2px 0;
 }
-.evo-arrow svg{width:18px;height:18px;}
-.evo-arrow .evo-method{font-size:8px;color:var(--text-muted);white-space:nowrap;}
+.evo-arrow-down svg{width:14px;height:14px;}
 
 /* ── Base Stats Bars ───────────────────────────────────── */
 .base-stats{margin-top:0;}
@@ -362,8 +363,6 @@ a.smogon-link:hover{text-decoration:underline;}
   .learnset-columns{grid-template-columns:1fr;}
   .poke-card img{width:min(200px,70%);}
   .fallback-grid{grid-template-columns:1fr;}
-  .evo-node img{width:40px;height:40px;}
-  .evo-node{padding:8px 10px 6px;min-width:60px;}
 }
 @media(max-width:640px){
   .navbar{padding:12px 16px;gap:10px;}
@@ -721,17 +720,19 @@ function renderAbilities(abilities){
 
 function renderEvolutionChain(chain,currentId){
   if(!chain||chain.length<=1)return'';
-  return`<div class="card" style="padding:16px 20px">
+  return`<div class="evo-section">
     <div class="evo-section-title">${ICONS.evo} Evolution Chain</div>
     <div class="evo-chain">
       ${chain.map((node,i)=>{
         const isCurrent=String(node.id)===String(currentId);
         const arrow=i<chain.length-1?
-          `<div class="evo-arrow">${ICONS.evo}${chain[i+1].label?`<span class="evo-method">${escapeHtml(chain[i+1].label)}</span>`:''}</div>`:'';
+          `<div class="evo-arrow-down">${ICONS.evo}</div>`:'';
         return`<div class="evo-node${isCurrent?' current':''}" data-name="${escapeHtml(node.name)}" onclick="lookup('${escapeHtml(node.name)}')">
           <img src="${spriteUrl(node.id)}" alt="${escapeHtml(node.name)}" loading="lazy">
-          <span class="evo-name">${escapeHtml(node.name)}</span>
-          ${node.label&&!isCurrent?`<span class="evo-detail">${escapeHtml(node.label)}</span>`:''}
+          <div class="evo-info">
+            <span class="evo-name">${escapeHtml(node.name)}</span>
+            ${node.label&&!isCurrent?`<span class="evo-detail">${escapeHtml(node.label)}</span>`:''}
+          </div>
         </div>${arrow}`;
       }).join('')}
     </div>
@@ -914,9 +915,9 @@ async function lookup(rawName){
           <div class="poke-stat"><div class="stat-label">Weight</div><div class="stat-value">${weight}</div></div>
         </div>
         ${dexEntry?`<p class="poke-dex-entry">${escapeHtml(dexEntry)}</p>`:''}
+        ${evoHtml}
       </aside>
       <div class="content-col">
-        ${evoHtml}
         ${buildHtml}
         ${learnHtml}
       </div>
