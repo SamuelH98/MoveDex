@@ -753,8 +753,6 @@ async function lookup(rawName){
   inputEl.placeholder='Search Pokémon...';
 
   const key=normalize(rawName);
-  const slug=rawName.trim().toLowerCase().replace(/[.']/g,'').replace(/\s+/g,'-');
-  history.pushState(null,'','#'+slug);
   const entry=DEX[key];
   const apiSlug=entry?entry.api:key;
   let poke;
@@ -763,6 +761,8 @@ async function lookup(rawName){
     if(!res.ok)throw new Error('not found');
     poke=await res.json();
   }catch(e){if(e.name!=='AbortError')renderError(rawName);return;}
+  const id=String(poke.id).padStart(3,'0');
+  history.pushState({name:rawName.trim()},rawName,`#${id}`);
 
   const sprite=(poke.sprites.other&&poke.sprites.other['official-artwork']&&poke.sprites.other['official-artwork'].front_default)||poke.sprites.front_default;
   const types=poke.types.map(t=>t.type.name);
@@ -966,12 +966,13 @@ async function loadAll(){
   pokeCache.sort((a,b)=>a.id-b.id);
   renderGrid();
   if(location.hash){
-    const name=decodeURIComponent(location.hash.slice(1).replace(/-/g,' '));
-    if(name)lookup(name);
+    const id=parseInt(location.hash.slice(1));
+    const p=pokeCache.find(x=>x.id===id);
+    if(p)lookup(p.name);
   }
-  window.addEventListener('popstate',()=>{
+  window.addEventListener('popstate',(e)=>{
     if(!location.hash){renderGrid();}
-    else{const name=decodeURIComponent(location.hash.slice(1).replace(/-/g,' '));if(name)lookup(name);}
+    else{const id=parseInt(location.hash.slice(1));const p=pokeCache.find(x=>x.id===id);if(p)lookup(p.name);}
   });
 }
 
