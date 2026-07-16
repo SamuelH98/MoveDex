@@ -141,6 +141,7 @@ main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px cla
 }
 .poke-grid-item.has-build{border-color:rgba(47,111,237,.25);}
 .poke-grid-item.has-build .grid-name{color:var(--white);}
+.poke-grid-item.evo-highlight{border-color:rgba(47,111,237,.6);background:rgba(47,111,237,.12);box-shadow:0 0 12px rgba(47,111,237,.3);}
 
 .grid-count{
   text-align:center;color:var(--text-muted);font-size:13px;
@@ -621,10 +622,39 @@ const GRID_BATCH=150;
 function spriteUrl(id){return`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;}
 function animatedSpriteUrl(id){return`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${id}.gif`;}
 
+const evoChainCache={};
+async function getEvoChainIds(speciesUrl){
+  if(evoChainCache[speciesUrl])return evoChainCache[speciesUrl];
+  try{
+    const res=await fetch(speciesUrl);if(!res.ok)return null;
+    const species=await res.json();
+    if(!species.evolution_chain||!species.evolution_chain.url)return null;
+    const res2=await fetch(species.evolution_chain.url);if(!res2.ok)return null;
+    const chain=await res2.json();
+    const ids=[];
+    function traverse(node){
+      const m=node.species.url.match(/\/(\d+)\/?$/);
+      if(m)ids.push(parseInt(m[1]));
+      if(node.evolves_to)node.evolves_to.forEach(traverse);
+    }
+    traverse(chain.chain);
+    evoChainCache[speciesUrl]=ids;
+    return ids;
+  }catch{return null;}
+}
+
+function clearEvoHighlight(){
+  document.querySelectorAll('.poke-grid-item.evo-highlight').forEach(el=>{
+    el.classList.remove('evo-highlight');
+    const img=el.querySelector('img');
+    if(img&&img.dataset.staticSrc){img.src=img.dataset.staticSrc;delete img.dataset.staticSrc;}
+  });
+}
+
 function makeGridItem(p){
   const inDex=DEX[p.slug];
   const animated=p.id<=649;
-  return`<div class="poke-grid-item${inDex?' has-build':''}" data-slug="${p.slug}" data-name="${escapeHtml(p.name)}"${animated?` data-animated="${animatedSpriteUrl(p.id)}"`:''}>
+  return`<div class="poke-grid-item${inDex?' has-build':''}" data-slug="${p.slug}" data-id="${p.id}" data-name="${escapeHtml(p.name)}"${animated?` data-animated="${animatedSpriteUrl(p.id)}"`:''}>
     <img data-src="${spriteUrl(p.id)}" alt="${escapeHtml(p.name)}">
     <span class="grid-id">#${String(p.id).padStart(3,'0')}</span>
     <span class="grid-name">${escapeHtml(p.name)}</span>
@@ -682,23 +712,43 @@ function renderGrid(filter){
     const item=e.target.closest('.poke-grid-item');
     if(item)lookup(item.dataset.name);
   });
-  grid.addEventListener('mouseenter',e=>{
+  let evoHoverTimer=null;
+  grid.addEventListener('mouseenter',async e=>{
     const item=e.target.closest('.poke-grid-item');
-    if(!item||!item.dataset.animated)return;
+    if(!item)return;
+    clearTimeout(evoHoverTimer);
+    clearEvoHighlight();
     const img=item.querySelector('img');
-    if(img&&!img.src.includes('.gif')){
+    if(img&&!img.src.includes('.gif')&&item.dataset.animated){
       img.dataset.staticSrc=img.src;
       img.src=item.dataset.animated;
     }
+    const poke=pokeCache.find(p=>p.id===parseInt(item.dataset.id));
+    if(!poke)return;
+    const speciesUrl=`https://pokeapi.co/api/v2/pokemon-species/${poke.id}`;
+    const ids=await getEvoChainIds(speciesUrl);
+    if(!ids||ids.length<=1)return;
+    const gridEl=mainArea.querySelector('.poke-grid');
+    if(!gridEl)return;
+    ids.forEach(evoId=>{
+      if(evoId===parseInt(item.dataset.id))return;
+      const match=gridEl.querySelector(`.poke-grid-item[data-id="${evoId}"]`);
+      if(!match)return;
+      match.classList.add('evo-highlight');
+      const evoImg=match.querySelector('img');
+      if(evoImg&&match.dataset.animated&&!evoImg.src.includes('.gif')){
+        evoImg.dataset.staticSrc=evoImg.src;
+        evoImg.src=match.dataset.animated;
+      }
+    });
   },true);
   grid.addEventListener('mouseleave',e=>{
     const item=e.target.closest('.poke-grid-item');
     if(!item)return;
+    clearTimeout(evoHoverTimer);
+    evoHoverTimer=setTimeout(clearEvoHighlight,100);
     const img=item.querySelector('img');
-    if(img&&img.dataset.staticSrc){
-      img.src=img.dataset.staticSrc;
-      delete img.dataset.staticSrc;
-    }
+    if(img&&img.dataset.staticSrc){img.src=img.dataset.staticSrc;delete img.dataset.staticSrc;}
   },true);
   if(gridBatchIdx<gridFiltered.length){
     const sentinel=document.getElementById('gridLoader');
