@@ -838,7 +838,7 @@ async function lookup(rawName){
         </div>
         <div class="build-col build-about-col">
           <div class="build-col-title">About This Build</div>
-          <p class="about-text">${buildSetDescription(set)}</p>
+          <p class="about-text">${set.description||buildSetDescription(set)}</p>
           <a class="smogon-btn" href="${smogonUrl}" target="_blank" rel="noopener">View on Smogon ${ICONS.link}</a>
         </div>
       </div>`;

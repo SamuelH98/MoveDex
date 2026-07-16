@@ -154,6 +154,22 @@ function pickFirstMove(val) {
   return val;
 }
 
+function stripHtml(html) {
+  if (!html) return '';
+  return html
+    .replace(/<br\s*\/?>/gi, '\n')
+    .replace(/<\/p>/gi, '\n\n')
+    .replace(/<[^>]+>/g, '')
+    .replace(/&amp;/g, '&')
+    .replace(/&lt;/g, '<')
+    .replace(/&gt;/g, '>')
+    .replace(/&quot;/g, '"')
+    .replace(/&#39;/g, "'")
+    .replace(/&nbsp;/g, ' ')
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}
+
 function genLabel(tier) {
   const m = tier.match(/^gen(\d)/);
   const gen = m ? parseInt(m[1]) : 9;
@@ -163,28 +179,52 @@ function genLabel(tier) {
 
 async function scrape() {
   const allPokemon = {};
+  const allAnalyses = {};
   let successCount = 0;
   let failCount = 0;
 
   for (const tier of ALL_TIERS) {
-    const url = `${BASE}/${tier}.json`;
+    const setsUrl = `${BASE}/${tier}.json`;
+    const analysesUrl = `https://data.pkmn.cc/analyses/${tier}.json`;
     process.stderr.write(`  ${tier}...`);
     try {
-      const res = await fetch(url);
-      if (!res.ok) { process.stderr.write(` ${res.status}\n`); failCount++; continue; }
-      const data = await res.json();
+      const [setsRes, analysesRes] = await Promise.all([
+        fetch(setsUrl).then(r => r.ok ? r.json() : null).catch(() => null),
+        fetch(analysesUrl).then(r => r.ok ? r.json() : null).catch(() => null)
+      ]);
+
+      if (!setsRes) { process.stderr.write(` no sets\n`); failCount++; continue; }
+
+      // Store analyses data
+      if (analysesRes) {
+        for (const [pokemon, analysis] of Object.entries(analysesRes)) {
+          if (!allAnalyses[pokemon]) allAnalyses[pokemon] = {};
+          if (analysis.sets) {
+            for (const [setName, setData] of Object.entries(analysis.sets)) {
+              if (!allAnalyses[pokemon][setName]) {
+                allAnalyses[pokemon][setName] = {
+                  description: setData.description || '',
+                  outdated: setData.outdated || false
+                };
+              }
+            }
+          }
+          if (analysis.overview && !allAnalyses[pokemon]._overview) {
+            allAnalyses[pokemon]._overview = analysis.overview;
+          }
+        }
+      }
+
       let count = 0;
-      for (const [pokemon, sets] of Object.entries(data)) {
+      for (const [pokemon, sets] of Object.entries(setsRes)) {
         if (!allPokemon[pokemon]) {
           allPokemon[pokemon] = {bestTier: tier, sets: {}};
         }
-        // Track best tier for this Pokemon
         const currentBestIdx = TIER_PRIORITY.indexOf(allPokemon[pokemon].bestTier);
         const thisIdx = TIER_PRIORITY.indexOf(tier);
         if (currentBestIdx === -1 || (thisIdx !== -1 && thisIdx < currentBestIdx)) {
           allPokemon[pokemon].bestTier = tier;
         }
-        // Merge sets (keep first occurrence per name)
         for (const [setName, setData] of Object.entries(sets)) {
           if (!allPokemon[pokemon].sets[setName]) {
             allPokemon[pokemon].sets[setName] = {data: setData, tier};
@@ -230,13 +270,15 @@ async function scrape() {
       allSets: Object.fromEntries(
         setNames.map(name => {
           const s = info.sets[name].data;
+          const analysis = allAnalyses[pokemon]?.[name];
           return [name, {
             item: pickFirst(s.item) || '',
             ability: pickFirst(s.ability) || '',
             nature: pickFirst(s.nature) || '',
             evs: fmtEVs(s.evs || {}),
             tera: pickFirst(s.teratypes) || '',
-            moves: (s.moves || []).map(m => pickFirstMove(m))
+            moves: (s.moves || []).map(m => pickFirstMove(m)),
+            description: analysis ? stripHtml(analysis.description) : ''
           }];
         })
       )
