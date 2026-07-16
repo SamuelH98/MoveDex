@@ -19,7 +19,6 @@
   --glass-shadow:0 15px 35px rgba(0,0,0,.35);
   --nav-bg:rgba(10,24,47,.85);
   --input-bg:#12284A;
-  --chip-bg:#102544;
   --font-display:'Sora',sans-serif;
   --font-body:'Inter',sans-serif;
 }
@@ -43,7 +42,7 @@ body{
 .navbar{
   position:sticky;top:0;z-index:100;
   min-height:70px;
-  display:grid;grid-template-columns:1fr auto 1fr;align-items:center;
+  display:flex;align-items:center;gap:16px;
   padding:10px 40px;
   background:var(--nav-bg);
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
@@ -51,8 +50,8 @@ body{
 }
 .nav-brand{
   font-family:var(--font-display);font-weight:800;font-size:24px;
-  color:var(--white);letter-spacing:-0.02em;justify-self:start;
-  white-space:nowrap;
+  color:var(--white);letter-spacing:-0.02em;
+  white-space:nowrap;flex-shrink:0;
 }
 .search-box{
   display:flex;align-items:center;gap:8px;
@@ -60,7 +59,6 @@ body{
   background:var(--input-bg);
   border:1px solid rgba(255,255,255,.08);
   border-radius:14px;padding:0 6px 0 14px;
-  position:relative;
 }
 .search-box svg{flex-shrink:0;opacity:.5;}
 .search-box input{
@@ -76,46 +74,18 @@ body{
   cursor:pointer;transition:all .2s ease;flex-shrink:0;
 }
 .search-box button:hover{transform:translateY(-1px);box-shadow:0 0 18px rgba(47,111,237,.45);}
-.quick-picks{display:flex;gap:8px;flex-wrap:wrap;justify-self:end;}
-.chip{
-  background:var(--chip-bg);color:var(--text-secondary);
-  border:1px solid rgba(255,255,255,.08);
-  padding:6px 14px;border-radius:20px;font-size:13px;
-  font-family:var(--font-body);cursor:pointer;transition:all .15s ease;
+.back-btn{
+  display:none;align-items:center;gap:6px;
+  background:rgba(255,255,255,.06);color:var(--text-secondary);
+  border:1px solid rgba(255,255,255,.08);border-radius:12px;
+  padding:0 16px;height:36px;
+  font-family:var(--font-body);font-weight:600;font-size:13px;
+  cursor:pointer;transition:all .15s ease;flex-shrink:0;
 }
-.chip:hover{background:var(--royal);color:white;border-color:var(--royal);}
-
-.search-wrap{position:relative;}
-.autocomplete{
-  position:absolute;top:calc(100% + 6px);left:0;right:0;
-  background:rgba(12,24,47,.96);
-  backdrop-filter:blur(24px);-webkit-backdrop-filter:blur(24px);
-  border:1px solid rgba(255,255,255,.1);
-  border-radius:14px;overflow:hidden;z-index:200;
-  max-height:380px;overflow-y:auto;
-  box-shadow:0 20px 50px rgba(0,0,0,.6);
-  display:none;
-}
-.autocomplete.open{display:block;}
-.autocomplete::-webkit-scrollbar{width:6px;}
-.autocomplete::-webkit-scrollbar-thumb{background:rgba(255,255,255,.15);border-radius:3px;}
-.ac-item{
-  display:flex;align-items:center;gap:12px;
-  padding:10px 16px;cursor:pointer;transition:background .1s;
-}
-.ac-item:hover,.ac-item.sel{background:rgba(47,111,237,.2);}
-.ac-item img{width:36px;height:36px;object-fit:contain;filter:drop-shadow(0 2px 4px rgba(0,0,0,.3));}
-.ac-item .ac-name{font-size:14px;color:var(--white);font-weight:500;flex:1;}
-.ac-item .ac-id{font-size:12px;color:var(--text-muted);font-weight:600;}
+.back-btn:hover{background:rgba(255,255,255,.1);color:var(--white);}
+.back-btn.visible{display:flex;}
 
 main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px clamp(16px,4vw,40px) 80px;}
-
-.empty-state{
-  display:flex;flex-direction:column;align-items:center;justify-content:center;
-  text-align:center;padding:80px 20px;gap:16px;
-}
-.empty-state h2{font-family:var(--font-display);font-size:clamp(18px,3vw,24px);font-weight:700;color:var(--white);margin:0;}
-.empty-state p{color:var(--text-muted);font-size:clamp(13px,1.5vw,15px);max-width:440px;margin:0;line-height:1.6;}
 
 .loading-state{
   display:flex;align-items:center;justify-content:center;gap:14px;
@@ -134,6 +104,48 @@ main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px cla
 }
 .error-state strong{color:var(--white);font-size:20px;font-family:var(--font-display);}
 
+/* ── Pokemon Grid ──────────────────────────────────────── */
+.poke-grid{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(110px,1fr));
+  gap:12px;
+}
+.poke-grid-item{
+  display:flex;flex-direction:column;align-items:center;
+  background:rgba(10,24,47,.6);
+  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
+  border:1px solid rgba(255,255,255,.06);
+  border-radius:14px;padding:14px 8px 10px;
+  cursor:pointer;transition:all .15s ease;
+}
+.poke-grid-item:hover{
+  background:rgba(47,111,237,.15);
+  border-color:rgba(47,111,237,.3);
+  transform:translateY(-2px);
+  box-shadow:0 8px 20px rgba(0,0,0,.3);
+}
+.poke-grid-item img{
+  width:72px;height:72px;object-fit:contain;
+  filter:drop-shadow(0 4px 8px rgba(0,0,0,.3));
+  image-rendering:pixelated;
+}
+.poke-grid-item .grid-id{
+  font-size:11px;color:var(--text-muted);font-weight:600;margin-top:6px;
+}
+.poke-grid-item .grid-name{
+  font-size:12px;color:var(--text-secondary);font-weight:600;
+  text-align:center;line-height:1.2;margin-top:2px;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.poke-grid-item.has-build{border-color:rgba(47,111,237,.25);}
+.poke-grid-item.has-build .grid-name{color:var(--white);}
+
+.grid-count{
+  text-align:center;color:var(--text-muted);font-size:13px;
+  margin-bottom:16px;
+}
+
+/* ── Detail View (same as before) ──────────────────────── */
 .layout{display:grid;grid-template-columns:minmax(280px,320px) 1fr;gap:18px;align-items:start;}
 
 .poke-card{
@@ -273,11 +285,9 @@ a.smogon-link:hover{text-decoration:underline;}
   .card-header{flex-wrap:wrap;}
 }
 @media(max-width:640px){
-  .navbar{grid-template-columns:1fr;min-height:auto;padding:12px 16px;gap:10px;}
-  .nav-brand{justify-self:center;font-size:22px;}
-  .search-wrap{width:100%;}
+  .navbar{padding:12px 16px;gap:10px;}
+  .nav-brand{font-size:22px;}
   .search-box{width:100%;}
-  .quick-picks{justify-self:center;display:none;}
   main{padding:12px 12px 60px;}
   .layout{gap:12px;}
   .card{padding:16px;border-radius:14px;}
@@ -290,6 +300,7 @@ a.smogon-link:hover{text-decoration:underline;}
   .learn-type-badge{font-size:8px;padding:1px 6px;}
   .move-pill{padding:8px 12px;font-size:13px;}
   .build-value{font-size:14px;}
+  .poke-grid{grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;}
 }
 @media(max-width:380px){
   .navbar{padding:10px 12px;}
@@ -311,29 +322,19 @@ a.smogon-link:hover{text-decoration:underline;}
 
 <nav class="navbar">
   <div class="nav-brand">MoveDex</div>
-  <div class="search-wrap">
-    <div class="search-box">
-      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-      <input id="searchInput" type="text" placeholder="Search Pokémon..." autocomplete="off" />
-      <button id="searchBtn">Search</button>
-    </div>
-    <div class="autocomplete" id="acList"></div>
+  <div class="search-box">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
+    <input id="searchInput" type="text" placeholder="Filter Pokémon..." autocomplete="off" />
+    <button id="searchBtn">Search</button>
   </div>
-  <div class="quick-picks">
-    <span class="chip" data-name="Garchomp">Garchomp</span>
-    <span class="chip" data-name="Dragapult">Dragapult</span>
-    <span class="chip" data-name="Great Tusk">Great Tusk</span>
-    <span class="chip" data-name="Gholdengo">Gholdengo</span>
-    <span class="chip" data-name="Miraidon">Miraidon</span>
-  </div>
+  <button class="back-btn" id="backBtn">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M19 12H5"/><path d="M12 19l-7-7 7-7"/></svg>
+    Back to Grid
+  </button>
 </nav>
 
 <main id="mainArea">
-  <div class="empty-state">
-    <svg width="64" height="64" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="3"/><line x1="5" y1="50" x2="95" y2="50" stroke="rgba(255,255,255,.08)" stroke-width="3"/><circle cx="50" cy="50" r="12" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="3"/><circle cx="50" cy="50" r="5" fill="rgba(255,255,255,.08)"/></svg>
-    <h2>Find the best build for any Pokémon</h2>
-    <p>Search above to see competitive builds, EV spreads, Tera types, and full level-up movepools.</p>
-  </div>
+  <div class="loading-state"><div class="spinner"></div>Loading Pokémon…</div>
 </main>
 
 <script>
@@ -485,12 +486,48 @@ function splitCols(arr,n){
 const mainArea=document.getElementById('mainArea');
 const inputEl=document.getElementById('searchInput');
 const btnEl=document.getElementById('searchBtn');
+const backBtn=document.getElementById('backBtn');
+
+let pokeCache=[];
+let currentView='grid'; // 'grid' or 'detail'
+
+function spriteUrl(id){return`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;}
+
+function renderGrid(filter){
+  currentView='grid';
+  backBtn.classList.remove('visible');
+  inputEl.placeholder='Filter Pokémon...';
+
+  let filtered=pokeCache;
+  if(filter){
+    const q=filter.toLowerCase();
+    filtered=pokeCache.filter(p=>p.name.toLowerCase().includes(q)||p.slug.includes(q)||String(p.id).includes(q));
+  }
+
+  const countHtml=`<div class="grid-count">${filtered.length} Pokémon${filter?' matching "'+escapeHtml(filter)+'"':''}</div>`;
+
+  const gridHtml=filtered.map(p=>{
+    const inDex=DEX[p.slug];
+    return`<div class="poke-grid-item${inDex?' has-build':''}" data-slug="${p.slug}" data-name="${escapeHtml(p.name)}">
+      <img src="${spriteUrl(p.id)}" alt="${escapeHtml(p.name)}" loading="lazy">
+      <span class="grid-id">#${String(p.id).padStart(3,'0')}</span>
+      <span class="grid-name">${escapeHtml(p.name)}</span>
+    </div>`;
+  }).join('');
+
+  mainArea.innerHTML=`${countHtml}<div class="poke-grid">${gridHtml}</div>`;
+
+  mainArea.querySelectorAll('.poke-grid-item').forEach(el=>{
+    el.addEventListener('click',()=>{lookup(el.dataset.name);});
+  });
+}
 
 function renderLoading(){
   mainArea.innerHTML='<div class="loading-state"><div class="spinner"></div>Looking up Pokémon…</div>';
 }
 function renderError(name){
-  mainArea.innerHTML=`<div class="error-state"><strong>Couldn't find "${escapeHtml(name)}"</strong><span>Check the spelling and try again.</span></div>`;
+  mainArea.innerHTML=`<div class="error-state"><strong>Couldn't find "${escapeHtml(name)}"</strong><span>Check the spelling and try again.</span></div>
+    <div style="text-align:center;margin-top:20px"><button class="back-btn visible" onclick="renderGrid()">← Back to Grid</button></div>`;
 }
 
 function genericAdviceFor(types){
@@ -519,8 +556,12 @@ function genericAdviceFor(types){
 }
 
 async function lookup(rawName){
-  if(!rawName||!rawName.trim()){renderEmpty();return;}
+  if(!rawName||!rawName.trim()){renderGrid();return;}
   renderLoading();
+  currentView='detail';
+  backBtn.classList.add('visible');
+  inputEl.placeholder='Search Pokémon...';
+
   const key=normalize(rawName);
   const entry=DEX[key];
   const apiSlug=entry?entry.api:key;
@@ -609,13 +650,6 @@ async function lookup(rawName){
   if(learnList.length===0){
     learnHtml=`<div class="card"><div class="card-header"><h2>Level-Up Learnset</h2></div><div class="learnset-grid-empty">No level-up learnset data available.</div></div>`;
   } else {
-    const rows=learnList.map(mv=>{
-      const t=typeMap[mv.name];
-      const tc=t?TYPE_COLORS[t]:null;
-      const lv=mv.level===0?'Evo':mv.level;
-      return`<div class="learn-row"><span class="lv">${lv}</span><span class="mv">${escapeHtml(mv.name)}</span>${tc?`<span class="learn-type-badge" style="background:${tc}">${t.toUpperCase()}</span>`:''}</div>`;
-    }).join('');
-    const cols=splitCols(learnList.length>0?learnList.map((mv,i)=>rows.split('</div>').filter(Boolean).length?i:-1):[],3);
     const colHtml=splitCols(learnList,3).map(col=>{
       return col.map(mv=>{
         const t=typeMap[mv.name];
@@ -653,34 +687,23 @@ async function lookup(rawName){
     </div>`;
 }
 
-function renderEmpty(){
-  mainArea.innerHTML=`
-    <div class="empty-state">
-      <svg width="64" height="64" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="none" stroke="rgba(255,255,255,.08)" stroke-width="3"/><line x1="5" y1="50" x2="95" y2="50" stroke="rgba(255,255,255,.08)" stroke-width="3"/><circle cx="50" cy="50" r="12" fill="none" stroke="rgba(255,255,255,.1)" stroke-width="3"/><circle cx="50" cy="50" r="5" fill="rgba(255,255,255,.08)"/></svg>
-      <h2>Find the best build for any Pokémon</h2>
-      <p>Search above to see competitive builds, EV spreads, Tera types, and full level-up movepools.</p>
-    </div>`;
-}
+backBtn.addEventListener('click',()=>{inputEl.value='';renderGrid();});
 
-btnEl.addEventListener('click',()=>{closeAC();lookup(inputEl.value);});
+btnEl.addEventListener('click',()=>{
+  if(currentView==='grid'){lookup(inputEl.value);}
+  else{renderGrid(inputEl.value);}
+});
 inputEl.addEventListener('keydown',e=>{
   if(e.key==='Enter'){
-    if(acIdx>=0&&acItems[acIdx]){selectAC(acItems[acIdx]);}
-    else{closeAC();lookup(inputEl.value);}
-    return;
+    if(currentView==='grid'){lookup(inputEl.value);}
+    else{renderGrid(inputEl.value);}
   }
-  if(e.key==='ArrowDown'){e.preventDefault();moveAC(1);}
-  if(e.key==='ArrowUp'){e.preventDefault();moveAC(-1);}
-  if(e.key==='Escape'){closeAC();}
 });
-document.querySelectorAll('.chip').forEach(chip=>{
-  chip.addEventListener('click',()=>{inputEl.value=chip.dataset.name;closeAC();lookup(chip.dataset.name);});
+inputEl.addEventListener('input',()=>{
+  if(currentView==='grid'){
+    renderGrid(inputEl.value);
+  }
 });
-
-const acList=document.getElementById('acList');
-let pokeCache=[];
-let acItems=[];
-let acIdx=-1;
 
 async function loadPokeCache(){
   try{
@@ -691,51 +714,12 @@ async function loadPokeCache(){
       const id=m?parseInt(m[1]):0;
       return{name:p.name.split('-').map(w=>w[0].toUpperCase()+w.slice(1)).join(' '),slug:p.name,id};
     });
-  }catch(e){}
+    pokeCache.sort((a,b)=>a.id-b.id);
+    renderGrid();
+  }catch(e){
+    mainArea.innerHTML='<div class="error-state"><strong>Failed to load Pokémon</strong><span>Check your connection and refresh.</span></div>';
+  }
 }
-
-function filterPoke(q){
-  if(!q)return pokeCache.filter(p=>DEX[p.slug]);
-  const s=q.toLowerCase();
-  return pokeCache.filter(p=>p.name.toLowerCase().includes(s)||p.slug.includes(s)).slice(0,8);
-}
-
-function spriteUrl(id){return`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;}
-
-function showAC(items){
-  acItems=items;acIdx=-1;
-  if(!items.length){acList.classList.remove('open');return;}
-  acList.innerHTML=items.map((p,i)=>{
-    const inDex=DEX[p.slug];
-    return`<div class="ac-item" data-idx="${i}"><img src="${spriteUrl(p.id)}" alt="" loading="lazy"><span class="ac-name">${p.name}</span>${inDex?`<span class="ac-id">${inDex.tier}</span>`:''}</div>`;
-  }).join('');
-  acList.classList.add('open');
-  acList.querySelectorAll('.ac-item').forEach(el=>{
-    el.addEventListener('mousedown',e=>{e.preventDefault();selectAC(items[parseInt(el.dataset.idx)]);});
-  });
-}
-
-function selectAC(p){
-  inputEl.value=p.name;closeAC();lookup(p.name);
-}
-function moveAC(d){
-  if(!acItems.length)return;
-  acIdx=Math.max(-1,Math.min(acItems.length-1,acIdx+d));
-  acList.querySelectorAll('.ac-item').forEach((el,i)=>{
-    el.classList.toggle('sel',i===acIdx);
-    if(i===acIdx)el.scrollIntoView({block:'nearest'});
-  });
-}
-function closeAC(){acList.classList.remove('open');acItems=[];acIdx=-1;}
-
-inputEl.addEventListener('input',()=>{
-  const q=inputEl.value.trim();
-  const items=filterPoke(q);
-  showAC(items);
-});
-document.addEventListener('click',e=>{
-  if(!e.target.closest('.search-wrap'))closeAC();
-});
 
 loadPokeCache();
 </script>
