@@ -653,6 +653,7 @@ function renderGrid(filter){
   currentView='grid';
   backBtn.classList.remove('visible');
   inputEl.placeholder='Filter Pokémon...';
+  if(location.hash){history.pushState(null,'',location.pathname);}
   if(gridObserver){gridObserver.disconnect();gridObserver=null;}
   let filtered=pokeCache;
   if(filter){
@@ -752,6 +753,8 @@ async function lookup(rawName){
   inputEl.placeholder='Search Pokémon...';
 
   const key=normalize(rawName);
+  const slug=rawName.trim().toLowerCase().replace(/[.']/g,'').replace(/\s+/g,'-');
+  history.pushState(null,'','#'+slug);
   const entry=DEX[key];
   const apiSlug=entry?entry.api:key;
   let poke;
@@ -962,6 +965,14 @@ async function loadAll(){
   });
   pokeCache.sort((a,b)=>a.id-b.id);
   renderGrid();
+  if(location.hash){
+    const name=decodeURIComponent(location.hash.slice(1).replace(/-/g,' '));
+    if(name)lookup(name);
+  }
+  window.addEventListener('popstate',()=>{
+    if(!location.hash){renderGrid();}
+    else{const name=decodeURIComponent(location.hash.slice(1).replace(/-/g,' '));if(name)lookup(name);}
+  });
 }
 
 loadAll().catch(()=>{
