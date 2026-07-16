@@ -128,7 +128,15 @@ main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px cla
   width:72px;height:72px;object-fit:contain;
   filter:drop-shadow(0 4px 8px rgba(0,0,0,.3));
   image-rendering:pixelated;
+  opacity:0;transition:opacity .3s ease;
 }
+.poke-grid-item img.loaded{opacity:1;}
+.poke-grid-item .img-placeholder{
+  width:72px;height:72px;
+  background:rgba(255,255,255,.04);border-radius:8px;
+  animation:pulse 1.5s ease-in-out infinite;
+}
+@keyframes pulse{0%,100%{opacity:.4}50%{opacity:.15}}
 .poke-grid-item .grid-id{
   font-size:11px;color:var(--text-muted);font-weight:600;margin-top:6px;
 }
@@ -144,6 +152,11 @@ main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px cla
   text-align:center;color:var(--text-muted);font-size:13px;
   margin-bottom:16px;
 }
+.grid-loader{
+  display:flex;align-items:center;justify-content:center;
+  padding:24px;color:var(--text-muted);font-size:13px;gap:8px;
+}
+.grid-loader .spinner{width:16px;height:16px;}
 
 /* ── Detail View (same as before) ──────────────────────── */
 .layout{display:grid;grid-template-columns:minmax(280px,320px) 1fr;gap:18px;align-items:start;}
@@ -490,36 +503,96 @@ const backBtn=document.getElementById('backBtn');
 
 let pokeCache=[];
 let currentView='grid'; // 'grid' or 'detail'
+let gridObserver=null;
+let gridBatchIdx=0;
+let gridFiltered=[];
+const GRID_BATCH=120;
 
 function spriteUrl(id){return`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;}
+
+function makeGridItem(p){
+  const inDex=DEX[p.slug];
+  return`<div class="poke-grid-item${inDex?' has-build':''}" data-slug="${p.slug}" data-name="${escapeHtml(p.name)}">
+    <div class="img-placeholder"></div>
+    <img data-src="${spriteUrl(p.id)}" alt="${escapeHtml(p.name)}">
+    <span class="grid-id">#${String(p.id).padStart(3,'0')}</span>
+    <span class="grid-name">${escapeHtml(p.name)}</span>
+  </div>`;
+}
+
+function loadVisibleImages(){
+  mainArea.querySelectorAll('.poke-grid-item img:not(.loaded)').forEach(img=>{
+    const src=img.dataset.src;
+    if(!src)return;
+    const rect=img.getBoundingClientRect();
+    if(rect.top<window.innerHeight+200){
+      img.src=src;
+      img.onload=()=>{img.classList.add('loaded');const ph=img.previousElementSibling;if(ph&&ph.classList.contains('img-placeholder'))ph.remove();};
+      img.onerror=()=>{img.classList.add('loaded');};
+    }
+  });
+}
+
+function appendNextBatch(){
+  const grid=mainArea.querySelector('.poke-grid');
+  if(!grid)return;
+  const loader=mainArea.querySelector('.grid-loader');
+  const start=gridBatchIdx;
+  const end=Math.min(start+GRID_BATCH,gridFiltered.length);
+  if(start>=end){if(loader)loader.remove();return;}
+  const frag=document.createDocumentFragment();
+  for(let i=start;i<end;i++){
+    const tmp=document.createElement('div');
+    tmp.innerHTML=makeGridItem(gridFiltered[i]);
+    frag.appendChild(tmp.firstElementChild);
+  }
+  if(loader)grid.before(frag);else grid.appendChild(frag);
+  gridBatchIdx=end;
+  loadVisibleImages();
+  if(gridBatchIdx<gridFiltered.length&&!mainArea.querySelector('.grid-loader')){
+    const ld=document.createElement('div');
+    ld.className='grid-loader';
+    ld.innerHTML='<div class="spinner"></div>Loading more…';
+    grid.after(ld);
+  } else if(loader&&gridBatchIdx>=gridFiltered.length){loader.remove();}
+}
 
 function renderGrid(filter){
   currentView='grid';
   backBtn.classList.remove('visible');
   inputEl.placeholder='Filter Pokémon...';
 
+  if(gridObserver){gridObserver.disconnect();gridObserver=null;}
+
   let filtered=pokeCache;
   if(filter){
     const q=filter.toLowerCase();
     filtered=pokeCache.filter(p=>p.name.toLowerCase().includes(q)||p.slug.includes(q)||String(p.id).includes(q));
   }
+  gridFiltered=filtered;
+  gridBatchIdx=0;
 
   const countHtml=`<div class="grid-count">${filtered.length} Pokémon${filter?' matching "'+escapeHtml(filter)+'"':''}</div>`;
+  const loaderHtml=filtered.length>GRID_BATCH?'<div class="grid-loader"><div class="spinner"></div>Loading more…</div>':'';
+  mainArea.innerHTML=`${countHtml}<div class="poke-grid"></div>${loaderHtml}`;
 
-  const gridHtml=filtered.map(p=>{
-    const inDex=DEX[p.slug];
-    return`<div class="poke-grid-item${inDex?' has-build':''}" data-slug="${p.slug}" data-name="${escapeHtml(p.name)}">
-      <img src="${spriteUrl(p.id)}" alt="${escapeHtml(p.name)}" loading="lazy">
-      <span class="grid-id">#${String(p.id).padStart(3,'0')}</span>
-      <span class="grid-name">${escapeHtml(p.name)}</span>
-    </div>`;
-  }).join('');
-
-  mainArea.innerHTML=`${countHtml}<div class="poke-grid">${gridHtml}</div>`;
+  appendNextBatch();
 
   mainArea.querySelectorAll('.poke-grid-item').forEach(el=>{
     el.addEventListener('click',()=>{lookup(el.dataset.name);});
   });
+
+  const sentinel=document.createElement('div');
+  sentinel.style.height='1px';
+  mainArea.appendChild(sentinel);
+  gridObserver=new IntersectionObserver(()=>{
+    if(currentView!=='grid')return;
+    appendNextBatch();
+    mainArea.querySelectorAll('.poke-grid-item').forEach(el=>{
+      el.onclick=()=>{lookup(el.dataset.name);};
+    });
+  },{rootMargin:'400px'});
+  gridObserver.observe(sentinel);
 }
 
 function renderLoading(){
@@ -699,11 +772,16 @@ inputEl.addEventListener('keydown',e=>{
     else{renderGrid(inputEl.value);}
   }
 });
+let filterTimer=null;
 inputEl.addEventListener('input',()=>{
   if(currentView==='grid'){
-    renderGrid(inputEl.value);
+    clearTimeout(filterTimer);
+    filterTimer=setTimeout(()=>renderGrid(inputEl.value),150);
   }
 });
+window.addEventListener('scroll',()=>{
+  if(currentView==='grid')loadVisibleImages();
+},{passive:true});
 
 async function loadPokeCache(){
   try{
