@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>MoveDex — Competitive Pokémon Lookup</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -21,6 +21,10 @@
   --input-bg:#12284A;
   --font-display:'Sora',sans-serif;
   --font-body:'Inter',sans-serif;
+  --safe-top:env(safe-area-inset-top,0px);
+  --safe-bottom:env(safe-area-inset-bottom,0px);
+  --safe-left:env(safe-area-inset-left,0px);
+  --safe-right:env(safe-area-inset-right,0px);
 }
 *{box-sizing:border-box;margin:0;padding:0;}
 html,body{margin:0;padding:0;}
@@ -28,11 +32,14 @@ body{
   font-family:var(--font-body);
   color:var(--text-primary);
   min-height:100vh;
+  min-height:100dvh;
   overflow-x:hidden;
   background:linear-gradient(180deg,#071321 0%,#08192d 50%,#0b2140 100%);
+  -webkit-tap-highlight-color:transparent;
+  overscroll-behavior-y:contain;
 }
 
-.glow{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0;}
+.glow{position:fixed;border-radius:50%;filter:blur(120px);pointer-events:none;z-index:0;will-change:transform;}
 .glow-tl{width:500px;height:500px;top:-150px;left:-200px;background:radial-gradient(circle,rgba(27,75,149,.4),transparent 70%);}
 .glow-tr{width:480px;height:480px;top:100px;right:-220px;background:radial-gradient(circle,rgba(47,111,237,.22),transparent 70%);}
 .glow-bl{width:520px;height:520px;bottom:-200px;left:-180px;background:radial-gradient(circle,rgba(91,143,249,.2),transparent 70%);}
@@ -44,14 +51,17 @@ body{
   min-height:70px;
   display:flex;align-items:center;gap:16px;
   padding:10px 40px;
+  padding-top:calc(10px + var(--safe-top));
   background:var(--nav-bg);
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   border-bottom:1px solid rgba(255,255,255,.06);
+  contain:layout style;
 }
 .nav-brand{
   font-family:var(--font-display);font-weight:800;font-size:24px;
   color:var(--white);letter-spacing:-0.02em;
   white-space:nowrap;flex-shrink:0;
+  touch-action:manipulation;
 }
 .search-box{
   display:flex;align-items:center;gap:8px;
@@ -63,7 +73,8 @@ body{
 .search-box svg{flex-shrink:0;opacity:.5;}
 .search-box input{
   flex:1;background:transparent;border:none;outline:none;
-  color:var(--white);font-family:var(--font-body);font-size:14px;
+  color:var(--white);font-family:var(--font-body);font-size:16px;
+  min-width:0;
 }
 .search-box input::placeholder{color:var(--text-muted);}
 .search-box button{
@@ -72,6 +83,7 @@ body{
   padding:0 18px;height:32px;
   font-family:var(--font-body);font-weight:600;font-size:13px;
   cursor:pointer;transition:all .2s ease;flex-shrink:0;
+  touch-action:manipulation;
 }
 .search-box button:hover{transform:translateY(-1px);box-shadow:0 0 18px rgba(47,111,237,.45);}
 .back-btn{
@@ -81,6 +93,7 @@ body{
   padding:0 16px;height:36px;
   font-family:var(--font-body);font-weight:600;font-size:13px;
   cursor:pointer;transition:all .15s ease;flex-shrink:0;
+  touch-action:manipulation;
 }
 .back-btn:hover{background:rgba(255,255,255,.1);color:var(--white);}
 .back-btn.visible{display:flex;}
@@ -113,10 +126,11 @@ main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px cla
 .poke-grid-item{
   display:flex;flex-direction:column;align-items:center;
   background:rgba(10,24,47,.6);
-  backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);
   border:1px solid rgba(255,255,255,.06);
   border-radius:14px;padding:14px 8px 10px;
-  cursor:pointer;transition:all .15s ease;
+  cursor:pointer;transition:background .15s ease,border-color .15s ease,box-shadow .15s ease;
+  contain:layout style paint;
+  touch-action:manipulation;
 }
 .poke-grid-item:hover{
   background:rgba(47,111,237,.15);
@@ -128,9 +142,8 @@ main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px cla
   width:72px;height:72px;object-fit:contain;
   filter:drop-shadow(0 4px 8px rgba(0,0,0,.3));
   image-rendering:pixelated;
-  opacity:0;transition:opacity .3s ease;
+  transition:opacity .3s ease;
 }
-.poke-grid-item img.loaded{opacity:1;}
 .poke-grid-item .grid-id{
   font-size:11px;color:var(--text-muted);font-weight:600;margin-top:6px;
 }
@@ -157,7 +170,7 @@ main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px cla
 .layout{display:grid;grid-template-columns:minmax(280px,320px) 1fr;gap:18px;align-items:start;}
 
 .poke-card{
-  position:sticky;top:102px;
+  position:sticky;top:calc(102px + var(--safe-top));
   background:rgba(10,24,47,.78);
   backdrop-filter:blur(20px);-webkit-backdrop-filter:blur(20px);
   border:1px solid var(--glass-border);
@@ -199,6 +212,7 @@ main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px cla
   border:1px solid var(--glass-border);
   border-radius:18px;padding:clamp(18px,2.5vw,28px) clamp(16px,2.5vw,32px);
   box-shadow:var(--glass-shadow);
+  contain:layout style;
 }
 .card-header{display:flex;align-items:center;gap:12px;margin-bottom:24px;flex-wrap:wrap;}
 .card-header h2{font-family:var(--font-display);font-size:20px;font-weight:700;color:var(--white);margin:0;}
@@ -243,7 +257,7 @@ main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px cla
   border-radius:10px;font-weight:700;color:#0a0d12;flex-shrink:0;
 }
 
-.about-text{font-size:14px;color:var(--text-secondary);line-height:1.65;margin:0 0 20px;max-height:260px;overflow-y:auto;padding-right:8px;}
+.about-text{font-size:14px;color:var(--text-secondary);line-height:1.65;margin:0 0 20px;max-height:260px;overflow-y:auto;padding-right:8px;-webkit-overflow-scrolling:touch;}
 .smogon-btn{
   display:flex;align-items:center;justify-content:center;gap:8px;
   width:100%;padding:12px 20px;
@@ -251,6 +265,7 @@ main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px cla
   color:white;border:none;border-radius:12px;
   font-family:var(--font-body);font-weight:600;font-size:14px;
   text-decoration:none;cursor:pointer;transition:all .2s ease;
+  touch-action:manipulation;
 }
 .smogon-btn:hover{transform:translateY(-2px);box-shadow:0 0 18px rgba(47,111,237,.45);}
 
@@ -263,6 +278,8 @@ main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px cla
   background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);
   border-radius:8px;color:var(--text-secondary);cursor:pointer;
   transition:all .15s ease;
+  touch-action:manipulation;
+  min-height:36px;
 }
 .set-btn:hover{background:rgba(47,111,237,.15);border-color:rgba(47,111,237,.3);color:var(--white);}
 .set-btn.active{background:rgba(47,111,237,.2);border-color:rgba(47,111,237,.5);color:var(--white);}
@@ -280,6 +297,7 @@ main{position:relative;z-index:1;max-width:1400px;margin:0 auto;padding:32px cla
   background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.08);
   border-radius:10px;padding:8px 6px 6px;cursor:pointer;
   transition:all .15s ease;min-width:0;
+  touch-action:manipulation;
 }
 .evo-node:hover{background:rgba(47,111,237,.15);border-color:rgba(47,111,237,.3);}
 .evo-node.current{border-color:rgba(47,111,237,.5);background:rgba(47,111,237,.12);}
@@ -350,6 +368,43 @@ a.smogon-link:hover{text-decoration:underline;}
 }
 .learnset-grid-empty{font-size:14px;color:var(--text-muted);font-style:italic;}
 
+/* ── Swipe Hint (mobile detail) ────────────────────────── */
+.swipe-hint{
+  display:none;text-align:center;color:var(--text-muted);font-size:12px;
+  padding:8px 0 4px;opacity:.6;
+}
+
+/* ── Reduced Motion ────────────────────────────────────── */
+@media(prefers-reduced-motion:reduce){
+  *,*::before,*::after{
+    animation-duration:.01ms!important;
+    animation-iteration-count:1!important;
+    transition-duration:.01ms!important;
+  }
+}
+
+/* ── Tablet+ ───────────────────────────────────────────── */
+@media(min-width:1025px) and (max-width:1280px){
+  .poke-grid{grid-template-columns:repeat(auto-fill,minmax(105px,1fr));}
+  .layout{grid-template-columns:minmax(260px,300px) 1fr;}
+}
+
+/* ── Tablet Portrait ───────────────────────────────────── */
+@media(min-width:641px) and (max-width:1024px){
+  .navbar{padding:10px 24px;gap:12px;}
+  .search-box{width:clamp(180px,35vw,400px);}
+  main{padding:20px 20px 60px;}
+  .poke-grid{grid-template-columns:repeat(auto-fill,minmax(100px,1fr));gap:10px;}
+  .layout{grid-template-columns:1fr;gap:16px;}
+  .poke-card{position:static;max-width:360px;margin:0 auto;}
+  .poke-card img{width:min(220px,75%);}
+  .build-columns{grid-template-columns:1fr 1fr;}
+  .build-about-col{grid-column:span 2;}
+  .learnset-columns{grid-template-columns:repeat(2,1fr);}
+  .fallback-grid{grid-template-columns:1fr 1fr;}
+}
+
+/* ── Large phones / small tablets ──────────────────────── */
 @media(max-width:1100px){
   .layout{grid-template-columns:1fr;}
   .poke-card{position:static;max-width:400px;margin:0 auto;}
@@ -366,10 +421,10 @@ a.smogon-link:hover{text-decoration:underline;}
   .fallback-grid{grid-template-columns:1fr;}
 }
 @media(max-width:640px){
-  .navbar{padding:12px 16px;gap:10px;}
+  .navbar{padding:12px 16px;gap:10px;padding-top:calc(12px + var(--safe-top));}
   .nav-brand{font-size:22px;}
   .search-box{width:100%;}
-  main{padding:12px 12px 60px;}
+  main{padding:12px 12px calc(60px + var(--safe-bottom));}
   .layout{gap:12px;}
   .card{padding:16px;border-radius:14px;}
   .build-columns{gap:16px;}
@@ -382,13 +437,16 @@ a.smogon-link:hover{text-decoration:underline;}
   .move-pill{padding:8px 12px;font-size:13px;}
   .build-value{font-size:14px;}
   .poke-grid{grid-template-columns:repeat(auto-fill,minmax(90px,1fr));gap:8px;}
+  .swipe-hint{display:block;}
+  .set-btn{min-height:40px;padding:8px 16px;font-size:13px;}
+  .smogon-btn{min-height:48px;}
 }
 @media(max-width:380px){
   .navbar{padding:10px 12px;}
   .nav-brand{font-size:20px;}
   .search-box{height:40px;}
   .search-box button{height:28px;padding:0 12px;font-size:12px;}
-  main{padding:8px 8px 40px;}
+  main{padding:8px 8px calc(40px + var(--safe-bottom));}
   .poke-card img{width:min(160px,55%);}
 }
 </style>
@@ -402,7 +460,7 @@ a.smogon-link:hover{text-decoration:underline;}
 <div class="glow glow-c"></div>
 
 <nav class="navbar">
-  <div class="nav-brand" id="navBrand" style="cursor:pointer">MoveDex</div>
+  <div class="nav-brand" id="navBrand" style="cursor:pointer">Move<span style="color:var(--royal-light)">Dex</span></div>
   <div class="search-box">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input id="searchInput" type="text" placeholder="Filter Pokémon..." autocomplete="off" />
@@ -618,6 +676,7 @@ let gridObserver=null;
 let gridBatchIdx=0;
 let gridFiltered=[];
 const GRID_BATCH=150;
+let scrollRafId=null;
 
 function spriteUrl(id){return`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;}
 function animatedSpriteUrl(id){return`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/versions/generation-v/black-white/animated/${id}.gif`;}
@@ -655,22 +714,10 @@ function makeGridItem(p){
   const inDex=DEX[p.slug];
   const animated=p.id<=649;
   return`<div class="poke-grid-item${inDex?' has-build':''}" data-slug="${p.slug}" data-id="${p.id}" data-name="${escapeHtml(p.name)}"${animated?` data-animated="${animatedSpriteUrl(p.id)}"`:''}>
-    <img data-src="${spriteUrl(p.id)}" alt="${escapeHtml(p.name)}">
+    <img src="${spriteUrl(p.id)}" alt="${escapeHtml(p.name)}" loading="lazy" decoding="async" width="72" height="72">
     <span class="grid-id">#${String(p.id).padStart(3,'0')}</span>
     <span class="grid-name">${escapeHtml(p.name)}</span>
   </div>`;
-}
-
-function loadVisibleImages(){
-  mainArea.querySelectorAll('.poke-grid-item img[data-src]:not(.loaded)').forEach(img=>{
-    const rect=img.getBoundingClientRect();
-    if(rect.top<window.innerHeight+300){
-      img.src=img.dataset.src;
-      img.removeAttribute('data-src');
-      img.onload=()=>img.classList.add('loaded');
-      img.onerror=()=>img.classList.add('loaded');
-    }
-  });
 }
 
 function appendNextBatch(){
@@ -679,11 +726,16 @@ function appendNextBatch(){
   const start=gridBatchIdx;
   const end=Math.min(start+GRID_BATCH,gridFiltered.length);
   if(start>=end)return;
+  const frag=document.createDocumentFragment();
+  const tmp=document.createElement('div');
+  let html='';
   for(let i=start;i<end;i++){
-    grid.insertAdjacentHTML('beforeend',makeGridItem(gridFiltered[i]));
+    html+=makeGridItem(gridFiltered[i]);
   }
+  tmp.innerHTML=html;
+  while(tmp.firstChild)frag.appendChild(tmp.firstChild);
+  grid.appendChild(frag);
   gridBatchIdx=end;
-  loadVisibleImages();
   if(gridBatchIdx>=gridFiltered.length){
     const ld=mainArea.querySelector('.grid-loader');
     if(ld)ld.remove();
@@ -696,6 +748,7 @@ function renderGrid(filter){
   inputEl.placeholder='Filter Pokémon...';
   if(location.hash){history.pushState(null,'',location.pathname);}
   if(gridObserver){gridObserver.disconnect();gridObserver=null;}
+  if(scrollRafId){cancelAnimationFrame(scrollRafId);scrollRafId=null;}
   let filtered=pokeCache;
   if(filter){
     const q=filter.toLowerCase();
@@ -713,43 +766,45 @@ function renderGrid(filter){
     if(item)lookup(item.dataset.name);
   });
   let evoHoverTimer=null;
-  grid.addEventListener('mouseenter',async e=>{
-    const item=e.target.closest('.poke-grid-item');
-    if(!item)return;
-    clearTimeout(evoHoverTimer);
-    clearEvoHighlight();
-    const img=item.querySelector('img');
-    if(img&&!img.src.includes('.gif')&&item.dataset.animated){
-      img.dataset.staticSrc=img.src;
-      img.src=item.dataset.animated;
-    }
-    const poke=pokeCache.find(p=>p.id===parseInt(item.dataset.id));
-    if(!poke)return;
-    const speciesUrl=`https://pokeapi.co/api/v2/pokemon-species/${poke.id}`;
-    const ids=await getEvoChainIds(speciesUrl);
-    if(!ids||ids.length<=1)return;
-    const gridEl=mainArea.querySelector('.poke-grid');
-    if(!gridEl)return;
-    ids.forEach(evoId=>{
-      if(evoId===parseInt(item.dataset.id))return;
-      const match=gridEl.querySelector(`.poke-grid-item[data-id="${evoId}"]`);
-      if(!match)return;
-      match.classList.add('evo-highlight');
-      const evoImg=match.querySelector('img');
-      if(evoImg&&match.dataset.animated&&!evoImg.src.includes('.gif')){
-        evoImg.dataset.staticSrc=evoImg.src;
-        evoImg.src=match.dataset.animated;
+  if(matchMedia('(hover:hover)').matches){
+    grid.addEventListener('mouseenter',async e=>{
+      const item=e.target.closest('.poke-grid-item');
+      if(!item)return;
+      clearTimeout(evoHoverTimer);
+      clearEvoHighlight();
+      const img=item.querySelector('img');
+      if(img&&!img.src.includes('.gif')&&item.dataset.animated){
+        img.dataset.staticSrc=img.src;
+        img.src=item.dataset.animated;
       }
-    });
-  },true);
-  grid.addEventListener('mouseleave',e=>{
-    const item=e.target.closest('.poke-grid-item');
-    if(!item)return;
-    clearTimeout(evoHoverTimer);
-    evoHoverTimer=setTimeout(clearEvoHighlight,100);
-    const img=item.querySelector('img');
-    if(img&&img.dataset.staticSrc){img.src=img.dataset.staticSrc;delete img.dataset.staticSrc;}
-  },true);
+      const poke=pokeCache.find(p=>p.id===parseInt(item.dataset.id));
+      if(!poke)return;
+      const speciesUrl=`https://pokeapi.co/api/v2/pokemon-species/${poke.id}`;
+      const ids=await getEvoChainIds(speciesUrl);
+      if(!ids||ids.length<=1)return;
+      const gridEl=mainArea.querySelector('.poke-grid');
+      if(!gridEl)return;
+      ids.forEach(evoId=>{
+        if(evoId===parseInt(item.dataset.id))return;
+        const match=gridEl.querySelector(`.poke-grid-item[data-id="${evoId}"]`);
+        if(!match)return;
+        match.classList.add('evo-highlight');
+        const evoImg=match.querySelector('img');
+        if(evoImg&&match.dataset.animated&&!evoImg.src.includes('.gif')){
+          evoImg.dataset.staticSrc=evoImg.src;
+          evoImg.src=match.dataset.animated;
+        }
+      });
+    },true);
+    grid.addEventListener('mouseleave',e=>{
+      const item=e.target.closest('.poke-grid-item');
+      if(!item)return;
+      clearTimeout(evoHoverTimer);
+      evoHoverTimer=setTimeout(clearEvoHighlight,100);
+      const img=item.querySelector('img');
+      if(img&&img.dataset.staticSrc){img.src=img.dataset.staticSrc;delete img.dataset.staticSrc;}
+    },true);
+  }
   if(gridBatchIdx<gridFiltered.length){
     const sentinel=document.getElementById('gridLoader');
     gridObserver=new IntersectionObserver(()=>{
@@ -761,8 +816,6 @@ function renderGrid(filter){
     const ld=document.getElementById('gridLoader');
     if(ld)ld.remove();
   }
-  loadVisibleImages();
-  window.addEventListener('scroll',loadVisibleImages,{passive:true});
 }
 
 function renderLoading(){
@@ -808,7 +861,7 @@ function renderEvolutionChain(chain,currentId){
         const arrow=i<chain.length-1?
           `<div class="evo-arrow-h">${ICONS.evo}</div>`:'';
         return`<div class="evo-node${isCurrent?' current':''}" data-name="${escapeHtml(node.name)}" onclick="lookup('${escapeHtml(node.name)}')">
-          <img src="${spriteUrl(node.id)}" alt="${escapeHtml(node.name)}" loading="lazy">
+          <img src="${spriteUrl(node.id)}" alt="${escapeHtml(node.name)}" loading="lazy" decoding="async" width="40" height="40">
           <div class="evo-info">
             <span class="evo-name">${escapeHtml(node.name)}</span>
             ${node.label&&!isCurrent?`<span class="evo-detail">${escapeHtml(node.label)}</span>`:''}
@@ -968,6 +1021,7 @@ async function lookup(rawName){
 
   const evoHtml=renderEvolutionChain(evoChain,poke.id);
 
+  const isMobile=window.innerWidth<=640;
   mainArea.innerHTML=`
     <div class="layout">
       <aside class="poke-card">
@@ -981,6 +1035,7 @@ async function lookup(rawName){
         </div>
         ${dexEntry?`<p class="poke-dex-entry">${escapeHtml(dexEntry)}</p>`:''}
         ${evoHtml}
+        ${isMobile?'<div class="swipe-hint">Swipe right to go back</div>':''}
       </aside>
       <div class="content-col">
         ${buildHtml}
@@ -1024,8 +1079,33 @@ inputEl.addEventListener('input',()=>{
     filterTimer=setTimeout(()=>renderGrid(inputEl.value),150);
   }
 });
-window.addEventListener('scroll',()=>{
-  if(currentView==='grid')loadVisibleImages();
+
+let swipeStartX=0;
+let swipeStartY=0;
+let swipeTracking=false;
+document.addEventListener('touchstart',e=>{
+  if(currentView!=='detail')return;
+  const touch=e.touches[0];
+  swipeStartX=touch.clientX;
+  swipeStartY=touch.clientY;
+  swipeTracking=true;
+},{passive:true});
+document.addEventListener('touchmove',e=>{
+  if(!swipeTracking)return;
+  const touch=e.touches[0];
+  const dx=touch.clientX-swipeStartX;
+  const dy=touch.clientY-swipeStartY;
+  if(Math.abs(dy)>Math.abs(dx)&&Math.abs(dy)>20)swipeTracking=false;
+},{passive:true});
+document.addEventListener('touchend',e=>{
+  if(!swipeTracking)return;
+  swipeTracking=false;
+  const touch=e.changedTouches[0];
+  const dx=touch.clientX-swipeStartX;
+  if(dx>80&&Math.abs(touch.clientY-swipeStartY)<100){
+    inputEl.value='';
+    renderGrid();
+  }
 },{passive:true});
 
 async function loadAll(){
