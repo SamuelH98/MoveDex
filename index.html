@@ -781,9 +781,10 @@ async function lookup(rawName){
   if(signal.aborted)return;
 
   let buildHtml;
+  let activeSetNames=[];
   if(entry){
-    const setNames=Object.keys(entry.allSets||{});
-    const firstSet=entry.allSets[setNames[0]]||entry;
+    activeSetNames=Object.keys(entry.allSets||{});
+    const firstSet=entry.allSets[activeSetNames[0]]||entry;
 
     function renderSet(set){
       const evs=parseEVs(set.evs||'');
@@ -832,33 +833,27 @@ async function lookup(rawName){
       </div>`;
     }
 
-    let setSelectorHtml='';
-    if(setNames.length>1){
-      setSelectorHtml=`<div class="set-selector" id="setSelector">
-        ${setNames.map((n,i)=>`<button class="set-btn${i===0?' active':''}" data-set="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join('')}
-      </div>`;
-    }
-
     buildHtml=`<div class="card">
       <div class="card-header"><h2>Competitive Build</h2><span class="tier-pill">${entry.tier}</span></div>
-      ${setSelectorHtml}
+      ${activeSetNames.length>1?`<div class="set-selector" id="setSelector">
+        ${activeSetNames.map((n,i)=>`<button class="set-btn${i===0?' active':''}" data-set="${escapeHtml(n)}">${escapeHtml(n)}</button>`).join('')}
+      </div>`:''}
       <div id="buildContent">${renderSet(firstSet)}</div>
     </div>`;
 
-    if(setNames.length>1){
-      setTimeout(()=>{
-        const selector=document.getElementById('setSelector');
-        if(!selector)return;
+    if(activeSetNames.length>1){
+      const selector=document.getElementById('setSelector');
+      if(selector){
         selector.addEventListener('click',e=>{
           const btn=e.target.closest('.set-btn');
           if(!btn)return;
           selector.querySelectorAll('.set-btn').forEach(b=>b.classList.remove('active'));
           btn.classList.add('active');
           const setName=btn.dataset.set;
-          const set=entry.allSets[setName]||firstSet;
-          document.getElementById('buildContent').innerHTML=renderSet(set);
+          const s=entry.allSets[setName]||firstSet;
+          document.getElementById('buildContent').innerHTML=renderSet(s);
         });
-      },0);
+      }
     }
   } else {
     const baseStats=poke.stats.map(s=>s.base_stat);
