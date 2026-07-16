@@ -624,8 +624,8 @@ function animatedSpriteUrl(id){return`https://raw.githubusercontent.com/PokeAPI/
 function makeGridItem(p){
   const inDex=DEX[p.slug];
   const animated=p.id<=649;
-  return`<div class="poke-grid-item${inDex?' has-build':''}" data-slug="${p.slug}" data-name="${escapeHtml(p.name)}">
-    <img data-src="${animated?animatedSpriteUrl(p.id):spriteUrl(p.id)}" data-fallback="${spriteUrl(p.id)}" alt="${escapeHtml(p.name)}">
+  return`<div class="poke-grid-item${inDex?' has-build':''}" data-slug="${p.slug}" data-name="${escapeHtml(p.name)}"${animated?` data-animated="${animatedSpriteUrl(p.id)}"`:''}>
+    <img data-src="${spriteUrl(p.id)}" alt="${escapeHtml(p.name)}">
     <span class="grid-id">#${String(p.id).padStart(3,'0')}</span>
     <span class="grid-name">${escapeHtml(p.name)}</span>
   </div>`;
@@ -638,13 +638,7 @@ function loadVisibleImages(){
       img.src=img.dataset.src;
       img.removeAttribute('data-src');
       img.onload=()=>img.classList.add('loaded');
-      img.onerror=()=>{
-        if(img.dataset.fallback){
-          img.src=img.dataset.fallback;
-          img.removeAttribute('data-fallback');
-        }
-        img.classList.add('loaded');
-      };
+      img.onerror=()=>img.classList.add('loaded');
     }
   });
 }
@@ -688,6 +682,24 @@ function renderGrid(filter){
     const item=e.target.closest('.poke-grid-item');
     if(item)lookup(item.dataset.name);
   });
+  grid.addEventListener('mouseenter',e=>{
+    const item=e.target.closest('.poke-grid-item');
+    if(!item||!item.dataset.animated)return;
+    const img=item.querySelector('img');
+    if(img&&!img.src.includes('.gif')){
+      img.dataset.staticSrc=img.src;
+      img.src=item.dataset.animated;
+    }
+  },true);
+  grid.addEventListener('mouseleave',e=>{
+    const item=e.target.closest('.poke-grid-item');
+    if(!item)return;
+    const img=item.querySelector('img');
+    if(img&&img.dataset.staticSrc){
+      img.src=img.dataset.staticSrc;
+      delete img.dataset.staticSrc;
+    }
+  },true);
   if(gridBatchIdx<gridFiltered.length){
     const sentinel=document.getElementById('gridLoader');
     gridObserver=new IntersectionObserver(()=>{
