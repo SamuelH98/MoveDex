@@ -334,7 +334,7 @@ a.smogon-link:hover{text-decoration:underline;}
 <div class="glow glow-c"></div>
 
 <nav class="navbar">
-  <div class="nav-brand">MoveDex</div>
+  <div class="nav-brand" id="navBrand" style="cursor:pointer">MoveDex</div>
   <div class="search-box">
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="rgba(255,255,255,.5)" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
     <input id="searchInput" type="text" placeholder="Filter Pokémon..." autocomplete="off" />
@@ -506,14 +506,13 @@ let currentView='grid'; // 'grid' or 'detail'
 let gridObserver=null;
 let gridBatchIdx=0;
 let gridFiltered=[];
-const GRID_BATCH=120;
+const GRID_BATCH=150;
 
 function spriteUrl(id){return`https://raw.githubusercontent.com/PokeAPI/sprites/master/sprites/pokemon/${id}.png`;}
 
 function makeGridItem(p){
   const inDex=DEX[p.slug];
   return`<div class="poke-grid-item${inDex?' has-build':''}" data-slug="${p.slug}" data-name="${escapeHtml(p.name)}">
-    <div class="img-placeholder"></div>
     <img data-src="${spriteUrl(p.id)}" alt="${escapeHtml(p.name)}">
     <span class="grid-id">#${String(p.id).padStart(3,'0')}</span>
     <span class="grid-name">${escapeHtml(p.name)}</span>
@@ -521,14 +520,13 @@ function makeGridItem(p){
 }
 
 function loadVisibleImages(){
-  mainArea.querySelectorAll('.poke-grid-item img:not(.loaded)').forEach(img=>{
-    const src=img.dataset.src;
-    if(!src)return;
+  mainArea.querySelectorAll('.poke-grid-item img[data-src]:not(.loaded)').forEach(img=>{
     const rect=img.getBoundingClientRect();
-    if(rect.top<window.innerHeight+200){
-      img.src=src;
-      img.onload=()=>{img.classList.add('loaded');const ph=img.previousElementSibling;if(ph&&ph.classList.contains('img-placeholder'))ph.remove();};
-      img.onerror=()=>{img.classList.add('loaded');};
+    if(rect.top<window.innerHeight+300){
+      img.src=img.dataset.src;
+      img.removeAttribute('data-src');
+      img.onload=()=>img.classList.add('loaded');
+      img.onerror=()=>img.classList.add('loaded');
     }
   });
 }
@@ -536,25 +534,18 @@ function loadVisibleImages(){
 function appendNextBatch(){
   const grid=mainArea.querySelector('.poke-grid');
   if(!grid)return;
-  const loader=mainArea.querySelector('.grid-loader');
   const start=gridBatchIdx;
   const end=Math.min(start+GRID_BATCH,gridFiltered.length);
-  if(start>=end){if(loader)loader.remove();return;}
-  const frag=document.createDocumentFragment();
+  if(start>=end)return;
   for(let i=start;i<end;i++){
-    const tmp=document.createElement('div');
-    tmp.innerHTML=makeGridItem(gridFiltered[i]);
-    frag.appendChild(tmp.firstElementChild);
+    grid.insertAdjacentHTML('beforeend',makeGridItem(gridFiltered[i]));
   }
-  if(loader)grid.before(frag);else grid.appendChild(frag);
   gridBatchIdx=end;
   loadVisibleImages();
-  if(gridBatchIdx<gridFiltered.length&&!mainArea.querySelector('.grid-loader')){
-    const ld=document.createElement('div');
-    ld.className='grid-loader';
-    ld.innerHTML='<div class="spinner"></div>Loading more…';
-    grid.after(ld);
-  } else if(loader&&gridBatchIdx>=gridFiltered.length){loader.remove();}
+  if(gridBatchIdx>=gridFiltered.length){
+    const ld=mainArea.querySelector('.grid-loader');
+    if(ld)ld.remove();
+  }
 }
 
 function renderGrid(filter){
@@ -573,26 +564,31 @@ function renderGrid(filter){
   gridBatchIdx=0;
 
   const countHtml=`<div class="grid-count">${filtered.length} Pokémon${filter?' matching "'+escapeHtml(filter)+'"':''}</div>`;
-  const loaderHtml=filtered.length>GRID_BATCH?'<div class="grid-loader"><div class="spinner"></div>Loading more…</div>':'';
-  mainArea.innerHTML=`${countHtml}<div class="poke-grid"></div>${loaderHtml}`;
+  const loaderHtml=`<div class="grid-loader" id="gridLoader"><div class="spinner"></div>Loading more…</div>`;
+  mainArea.innerHTML=`${countHtml}<div class="poke-grid" id="pokeGrid"></div>${loaderHtml}`;
 
   appendNextBatch();
 
-  mainArea.querySelectorAll('.poke-grid-item').forEach(el=>{
-    el.addEventListener('click',()=>{lookup(el.dataset.name);});
+  const grid=document.getElementById('pokeGrid');
+  grid.addEventListener('click',e=>{
+    const item=e.target.closest('.poke-grid-item');
+    if(item)lookup(item.dataset.name);
   });
 
-  const sentinel=document.createElement('div');
-  sentinel.style.height='1px';
-  mainArea.appendChild(sentinel);
-  gridObserver=new IntersectionObserver(()=>{
-    if(currentView!=='grid')return;
-    appendNextBatch();
-    mainArea.querySelectorAll('.poke-grid-item').forEach(el=>{
-      el.onclick=()=>{lookup(el.dataset.name);};
-    });
-  },{rootMargin:'400px'});
-  gridObserver.observe(sentinel);
+  if(gridBatchIdx<gridFiltered.length){
+    const sentinel=document.getElementById('gridLoader');
+    gridObserver=new IntersectionObserver(()=>{
+      if(currentView!=='grid')return;
+      appendNextBatch();
+    },{rootMargin:'600px'});
+    gridObserver.observe(sentinel);
+  } else {
+    const ld=document.getElementById('gridLoader');
+    if(ld)ld.remove();
+  }
+
+  loadVisibleImages();
+  window.addEventListener('scroll',loadVisibleImages,{passive:true});
 }
 
 function renderLoading(){
@@ -761,6 +757,7 @@ async function lookup(rawName){
 }
 
 backBtn.addEventListener('click',()=>{inputEl.value='';renderGrid();});
+document.getElementById('navBrand').addEventListener('click',()=>{inputEl.value='';renderGrid();});
 
 btnEl.addEventListener('click',()=>{
   if(currentView==='grid'){lookup(inputEl.value);}
