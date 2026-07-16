@@ -460,6 +460,15 @@ function normalize(str){
 function titleCase(s){return s.split('-').map(w=>w[0].toUpperCase()+w.slice(1)).join(' ');}
 function escapeHtml(s){return s.replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));}
 function typeBadges(types){return types.map(t=>`<span class="type-badge" style="background:${TYPE_COLORS[t]||'#888'}">${t.toUpperCase()}</span>`).join('');}
+function buildSetDescription(set){
+  const parts=[];
+  if(set.item)parts.push(`Holding ${set.item}`);
+  if(set.ability)parts.push(`Ability: ${set.ability}`);
+  if(set.nature)parts.push(`${set.nature} nature`);
+  if(set.tera)parts.push(`Tera ${set.tera}`);
+  if(set.moves&&set.moves.length)parts.push(`Main moves: ${set.moves.join(', ')}`);
+  return parts.length?parts.join('. ')+'.' :'Competitive set from Smogon.';
+}
 
 function parseEVs(evString){
   return evString.split('/').map(part=>{
@@ -829,7 +838,7 @@ async function lookup(rawName){
         </div>
         <div class="build-col build-about-col">
           <div class="build-col-title">About This Build</div>
-          <p class="about-text">${entry.note||''}</p>
+          <p class="about-text">${buildSetDescription(set)}</p>
           <a class="smogon-btn" href="${smogonUrl}" target="_blank" rel="noopener">View on Smogon ${ICONS.link}</a>
         </div>
       </div>`;
